@@ -1,2 +1,3 @@
-# lyre
- a language
+# Lyre
+
+a language
