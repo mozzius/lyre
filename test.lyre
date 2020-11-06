@@ -1,0 +1,23 @@
+// comment
+
+// new :: Chan a
+// recv :: Chan a -> IO a
+// send :: a -> Chan a -> IO ()
+
+// spawn : (Channel s -> ()) -> Channel (Dual s)
+
+worker stringRepeatingWorker(string | End) -> string | null {
+  func repeatStr(string s, number n) -> string {
+  if (n > 0) {
+    // is this the best string concatination method?
+    return s + repeatStr(s, n-1)
+  } else {
+    return s
+  }
+
+  receive {
+    string s -> {
+      let res = repeatStr(s)
+    }
+  }
+}

@@ -1,0 +1,101 @@
+base: statement+ 'eol'
+
+statement:
+    | assignment
+    | 'return' expression
+    | 'break'
+    | if_statement
+    | for_statement
+    | while_statement
+    | function_definition
+    | worker_definition
+
+assignment: 'let' variable_name assignment_operator expression
+
+variable_name: [A-Z](_?[A-Z0-9])*
+
+assignment_operator:
+    | '='
+    | '+='
+    | '-='
+    | '*='
+    | '/='
+    | '!='
+
+expression:
+    | conjunction ('||' conjunction)+ 
+    | conjunction
+
+conjunction:
+    | inversion ('&&' inversion)+ 
+    | inversion
+
+inversion:
+    | '!' inversion 
+    | sum
+
+sum:
+    | sum '+' term 
+    | sum '-' term 
+    | term
+
+term:
+    | term '*' factor 
+    | term '/' factor 
+    | term '//' factor 
+    | term '%' factor 
+    | factor
+
+factor:
+    | '+' factor 
+    | '-' factor 
+    | power
+
+power:
+    | molecule '**' factor
+    | molecule
+
+molecule:
+    | '(' expression ')'
+    | atom
+
+atom:
+    | 'true'
+    | 'false'
+    | 'null'
+    | string_literal
+    | number_literal
+    | anonymous_function
+    | variable_name
+
+string_literal:
+    | '[a-z0-9]'
+    | "[a-z0-9]"
+
+if_statement:
+    | 'if' '(' expression ')' block
+    | if_statement 'else' block
+
+if_statement_without_else:
+    | 'if' '(' expression ')' block
+    | if_statement_without_else 'else' if_statement_without_else
+
+block:
+    | expression
+    | '{' statement+ '}'
+
+for_statement: 'for' '(' not sure ')' block
+
+while_statement: 'while' '(' expression ')' block
+
+function_definition: 'func' variable_name '(' parameter_list ')' '->' type block
+
+anonymous_function: 'func' '(' ')' '->' return_value block
+
+parameter_list:
+    | type variable_name, parameter_list
+    | type variable_name
+
+type: variable_name
+
+worker_definition: 'worker' variable_name block

@@ -1,0 +1,60 @@
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.33.0.
+--
+-- see: https://github.com/sol/hpack
+--
+-- hash: f9aa47554ddafd546cd87a72ab1920fad170869053a65a511995ffc2d85a20c1
+
+name:           lyre
+version:        0.1.0.0
+description:    Please see the README on GitHub at <https://github.com/githubuser/lyre#readme>
+homepage:       https://github.com/Mozzius/lyre#readme
+bug-reports:    https://github.com/Mozzius/lyre/issues
+author:         Samuel Newman
+maintainer:     samuel@felixnewman.com
+copyright:      2020 Samuel Newman
+license:        BSD3
+license-file:   LICENSE
+build-type:     Simple
+extra-source-files:
+    README.md
+    ChangeLog.md
+
+source-repository head
+  type: git
+  location: https://github.com/Mozzius/lyre
+
+library
+  exposed-modules:
+      Exprs
+      Lexer
+      Parser
+  other-modules:
+      Paths_lyre
+  hs-source-dirs:
+      src
+  build-depends:
+      array
+    , base >=4.7 && <5
+    , filepath
+    , text
+  default-language: Haskell2010
+
+executable lyre-exe
+  main-is: Main.hs
+  other-modules:
+      Paths_lyre
+  hs-source-dirs:
+      ./.
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  build-tools:
+      alex
+    , happy
+  build-depends:
+      array
+    , base >=4.7 && <5
+    , filepath
+    , lyre
+    , text
+  default-language: Haskell2010
