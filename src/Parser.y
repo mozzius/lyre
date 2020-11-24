@@ -4,43 +4,78 @@ import Exprs
 import Lexer
 }
 
-%name program
+%name program StatementsEmptyable
 %tokentype { Token }
 %error { parseError }
 
 %token 
-  let  { TokenLet _ }
-  in   { TokenIn _ }
-  var  { TokenVar _ $$ }
-  int  { TokenInt _ $$ }
-  '='  { TokenEq _ }
-  '+'  { TokenPlus _ }
-  '-'  { TokenMinus _ }
-  '*'  { TokenTimes _ }
-  '/'  { TokenDiv _ }
-  '('  { TokenLParen _ }
-  ')'  { TokenRParen _ }
+  let     { TokenLet _ }
+  var     { TokenVar _ $$ }
+  int     { TokenInt _ $$ }
+  return  { TokenReturn _ }
+  func    { TokenFunc _ }
+  '!'     { TokenNot _ }
+  '='     { TokenEq _ }
+  '+'     { TokenPlus _ }
+  '-'     { TokenMinus _ }
+  '*'     { TokenTimes _ }
+  '/'     { TokenDiv _ }
+  '('     { TokenLParen _ }
+  ')'     { TokenRParen _ }
+  '{'     { TokenLCurly _ }
+  '}'     { TokenRCurly _ }
+  '||'    { TokenDisj _ }
+  '&&'    { TokenConj _ }
+  newline { TokenNL _ }
 
 %%
 
-Exp
-  : let var '=' Exp in Exp  { Let $2 $4 $6 }
-  | Exp1                    { Exp1 $1 }
+Block
+  : Expression                   { Expr $1 }
+  | '{' StatementsEmptyable '}'  { Curly $2 }
 
-Exp1
-  : Exp1 '+' Term           { Plus $1 $3 }
-  | Exp1 '-' Term           { Minus $1 $3 }
-  | Term                    { Term $1 }
+StatementsEmptyable
+  : Statements                   { $1 }
+  |                              { [] }
+
+Statements
+  : Statement newline Statements { $1:$3 }
+  | Statement                    { [$1] }
+
+Statement
+  : Assignment                   { $1 }
+  | return Expression            { Return $2 }
+  | func var '(' ')' Block       { FuncDef $2 $5 }
+
+Assignment
+  : let var '=' Expression       { Let $2 $4 }
+
+Expression
+  : Expression '||' Expression   { BinOp Or $1 $3 }
+  | Conjunction                  { $1 }
+
+Conjunction
+  : Conjunction '&&' Conjunction { BinOp And $1 $3 }
+  | Inversion                    { $1 }
+
+Inversion
+  : '!' Inversion                { UnaOp Inv $2 }
+  | Sum                          { $1 }
+
+Sum
+  : Sum '+' Term                 { BinOp Plus $1 $3 }
+  | Sum '-' Term                 { BinOp Minus $1 $3 }
+  | Term                         { $1 }
 
 Term
-  : Term '*' Factor         { Times $1 $3 }
-  | Term '/' Factor         { Div $1 $3 }
-  | Factor                  { Factor $1 }
+  : Term '*' Factor              { BinOp Times $1 $3 }
+  | Term '/' Factor              { BinOp Div $1 $3 }
+  | Factor                       { $1 }
 
 Factor
-  : int                     { Int (read $1) }
-  | var                     { Var $1 }
-  | '(' Exp ')'             { Brack $2 }
+  : var                          { Var $1 }
+  | int                          { Int (read $1) }
+  | '(' Expression ')'           { Brack $2 }
 
 
 {
@@ -48,7 +83,7 @@ Factor
 parseError :: [Token] -> a
 parseError _ = error "Parse error"
 
-parseProgram :: String -> Exp
+parseProgram :: String -> Stmts
 parseProgram input = program $ scanTokens input
 
 }

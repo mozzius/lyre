@@ -31,49 +31,42 @@ tokens :-
 
   $white*$eol                   { \p s -> TokenNL p }
   $eol+                         { \p s -> TokenNL p }
-  $white+                       ;
-  "--".*                        ;
+  " "+                       ;
+  "//".*                        ;
   @constr                       { \p s -> TokenConstr p s }
   lang\.@langPrag               { \p s -> TokenLang p s }
-  forall                        { \p _ -> TokenForall p }
-  let                           { \p s -> TokenLet p }
-  in                            { \p s -> TokenIn p }
-  succ                          { \p s -> TokenSucc p }
-  zero                          { \p s -> TokenZero p }
-  natcase                       { \p s -> TokenNatCase p }
-  case                          { \p s -> TokenCase p }
-  of                            { \p s -> TokenOf p }
-  fix                           { \p s -> TokenFix p }
-  fst                           { \p s -> TokenFst p }
-  snd                           { \p s -> TokenSnd p }
-  inl                           { \p s -> TokenInl p }
-  inr                           { \p s -> TokenInr p }
-  "|"                           { \p s -> TokenSep p }
+  let                           { \p _ -> TokenLet p }
+  in                            { \p _ -> TokenIn p }
+  of                            { \p _ -> TokenOf p }
+  func                          { \p _ -> TokenFunc p }
+  return                        { \p _ -> TokenReturn p }
   @sym				                  { \p s -> TokenVar p s }
   @int				                  { \p s -> TokenInt p s }
-  "->"                          { \p s -> TokenArrow p }
-  \\                            { \p s -> TokenDiv p }
-  \/\\                          { \p s -> TokenTyLambda p }
-  \=                            { \p s -> TokenEq p }
-  \(                            { \p s -> TokenLParen p }
-  \)                            { \p s -> TokenRParen p }
-  \:                            { \p s -> TokenSig p }
-  "?"                           { \p _ -> TokenHole p }
-  "*"                           { \p s -> TokenTimes p }
-  "+"                           { \p s -> TokenPlus p }
-  "-"                           { \p s -> TokenMinus p }
-  "<"                           { \p s -> TokenLPair p }
-  ">"                           { \p s -> TokenRPair p }
-  ", "                          { \p s -> TokenMPair p }
+  "->"                          { \p _ -> TokenArrow p }
+  \\                            { \p _ -> TokenDiv p }
+  \=                            { \p _ -> TokenEq p }
+  \(                            { \p _ -> TokenLParen p }
+  \)                            { \p _ -> TokenRParen p }
+  \{                            { \p _ -> TokenLCurly p }
+  \}                            { \p _ -> TokenRCurly p }
+  \:                            { \p _ -> TokenSig p }
+  "*"                           { \p _ -> TokenTimes p }
+  "+"                           { \p _ -> TokenPlus p }
+  "-"                           { \p _ -> TokenMinus p }
+  "<"                           { \p _ -> TokenLPair p }
+  ">"                           { \p _ -> TokenRPair p }
+  ", "                          { \p _ -> TokenMPair p }
   \.                            { \p _ -> TokenDot p }
   \@                            { \p _ -> TokenAt p }
+  "||"                          { \p _ -> TokenDisj p }
+  "&&"                          { \p _ -> TokenConj p }
+  "!"                           { \p _ -> TokenNot p }
 
 {
 
 data Token
   = TokenLang     AlexPosn String
   | TokenCase     AlexPosn
-  | TokenNatCase  AlexPosn
   | TokenOf       AlexPosn
   | TokenSep      AlexPosn
   | TokenFix      AlexPosn
@@ -109,6 +102,13 @@ data Token
   | TokenDiv      AlexPosn
   | TokenInt      AlexPosn String
   | TokenMinus    AlexPosn
+  | TokenLCurly   AlexPosn
+  | TokenRCurly   AlexPosn
+  | TokenDisj     AlexPosn
+  | TokenConj     AlexPosn
+  | TokenFunc     AlexPosn
+  | TokenNot      AlexPosn
+  | TokenReturn   AlexPosn
   deriving (Eq, Show, Generic)
 
 symString :: Token -> String

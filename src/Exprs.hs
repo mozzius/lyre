@@ -1,24 +1,35 @@
 module Exprs where
 
-data Exp
-  = Let String Exp Exp
-  | Exp1 Exp1
+type Stmts = [Stmt]
+
+data Stmt
+  = Let String Expr
+  | Return Expr
+  | FuncDef String Block
   deriving (Show)
 
-data Exp1
-  = Plus Exp1 Term
-  | Minus Exp1 Term
-  | Term Term
+data BinOp
+  = Or
+  | And
+  | Plus
+  | Minus
+  | Div
+  | Times
   deriving (Show)
 
-data Term
-  = Times Term Factor
-  | Div Term Factor
-  | Factor Factor
+data UnaOp
+  = Inv
   deriving (Show)
 
-data Factor
-  = Int Int
+data Expr
+  = BinOp BinOp Expr Expr
+  | UnaOp UnaOp Expr
+  | Int Int
   | Var String
-  | Brack Exp
+  | Brack Expr
+  deriving (Show)
+
+data Block
+  = Curly Stmts
+  | Expr Expr
   deriving (Show)
