@@ -4,7 +4,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE DeriveGeneric #-}
 
-module Lexer (Token(..),scanTokens,symString,constrString) where
+module Lexer (Token(..),scanTokens,symString,getPos) where
 
 import Data.Text (Text)
 import GHC.Generics (Generic)
@@ -13,16 +13,15 @@ import GHC.Generics (Generic)
 
 %wrapper "posn"
 
-$digit  = 0-9
-$alpha  = [a-zA-Z\_\-\=]
-$lower  = [a-z]
-$upper  = [A-Z]
-$eol    = [\n]
-$alphanum  = [$alpha $digit \_]
-@sym    = $lower ($alphanum | \')*
-@constr = ($upper ($alphanum | \')* | \(\))
-@int    = \-? $digit+
-@charLiteral = \' ([\\.]|[^\']| . ) \'
+$digit         = 0-9
+$alpha         = [a-zA-Z\_\-]
+$lower         = [a-z]
+$upper         = [A-Z]
+$eol           = [\n]
+$alphanum      = [$alpha $digit]
+@sym           = $alpha($alphanum)*
+@int           = \-? $digit+
+@charLiteral   = \' ([\\.]|[^\']| . ) \'
 @stringLiteral = \"(\\.|[^\"]|\n)*\"
 
 @langPrag = [a-z]+
@@ -31,9 +30,8 @@ tokens :-
 
   $white*$eol                   { \p s -> TokenNL p }
   $eol+                         { \p s -> TokenNL p }
-  " "+                       ;
+  " "+                          ;
   "//".*                        ;
-  @constr                       { \p s -> TokenConstr p s }
   lang\.@langPrag               { \p s -> TokenLang p s }
   let                           { \p _ -> TokenLet p }
   in                            { \p _ -> TokenIn p }
@@ -82,7 +80,6 @@ data Token
   | TokenLParen   AlexPosn
   | TokenRParen   AlexPosn
   | TokenNL       AlexPosn
-  | TokenConstr   AlexPosn String
   | TokenSig      AlexPosn
   | TokenEquiv    AlexPosn
   | TokenHole     AlexPosn
@@ -115,10 +112,53 @@ symString :: Token -> String
 symString (TokenSym _ x) = x
 symString _ = error "Not a symbol"
 
-constrString :: Token -> String
-constrString (TokenConstr _ x) = x
-
 scanTokens = alexScanTokens >>= (return . trim)
+
+getPos :: Token -> (String, Int, Int)
+getPos (TokenDiv      (AlexPn _ line col)  ) = ("Div",      line, col)
+getPos (TokenLang     (AlexPn _ line col) _) = ("Lang",     line, col)
+getPos (TokenCase     (AlexPn _ line col)  ) = ("Case",     line, col)
+getPos (TokenOf       (AlexPn _ line col)  ) = ("Of",       line, col)
+getPos (TokenSep      (AlexPn _ line col)  ) = ("Sep",      line, col)
+getPos (TokenFix      (AlexPn _ line col)  ) = ("Fix",      line, col)
+getPos (TokenLet      (AlexPn _ line col)  ) = ("Let",      line, col)
+getPos (TokenIn       (AlexPn _ line col)  ) = ("In",       line, col)
+getPos (TokenTyLambda (AlexPn _ line col)  ) = ("TyLambda", line, col)
+getPos (TokenLambda   (AlexPn _ line col)  ) = ("Lambda",   line, col)
+getPos (TokenSym      (AlexPn _ line col) _) = ("Sym",      line, col)
+getPos (TokenZero     (AlexPn _ line col)  ) = ("Zero",     line, col)
+getPos (TokenSucc     (AlexPn _ line col)  ) = ("Succ",     line, col)
+getPos (TokenArrow    (AlexPn _ line col)  ) = ("Arrow",    line, col)
+getPos (TokenEq       (AlexPn _ line col)  ) = ("Eq",       line, col)
+getPos (TokenLParen   (AlexPn _ line col)  ) = ("LParen",   line, col)
+getPos (TokenRParen   (AlexPn _ line col)  ) = ("RParen",   line, col)
+getPos (TokenNL       (AlexPn _ line col)  ) = ("NL",       line, col)
+getPos (TokenSig      (AlexPn _ line col)  ) = ("Sig",      line, col)
+getPos (TokenEquiv    (AlexPn _ line col)  ) = ("Equiv",    line, col)
+getPos (TokenHole     (AlexPn _ line col)  ) = ("Hole",     line, col)
+getPos (TokenTimes    (AlexPn _ line col)  ) = ("Times",    line, col)
+getPos (TokenPlus     (AlexPn _ line col)  ) = ("Plus",     line, col)
+getPos (TokenLPair    (AlexPn _ line col)  ) = ("LPair",    line, col)
+getPos (TokenRPair    (AlexPn _ line col)  ) = ("RPair",    line, col)
+getPos (TokenMPair    (AlexPn _ line col)  ) = ("MPair",    line, col)
+getPos (TokenFst      (AlexPn _ line col)  ) = ("Fst",      line, col)
+getPos (TokenSnd      (AlexPn _ line col)  ) = ("Snd",      line, col)
+getPos (TokenInl      (AlexPn _ line col)  ) = ("Inl",      line, col)
+getPos (TokenInr      (AlexPn _ line col)  ) = ("Inr",      line, col)
+getPos (TokenForall   (AlexPn _ line col)  ) = ("Forall",   line, col)
+getPos (TokenDot      (AlexPn _ line col)  ) = ("Dot",      line, col)
+getPos (TokenAt       (AlexPn _ line col)  ) = ("At",       line, col)
+getPos (TokenVar      (AlexPn _ line col) _) = ("Var",      line, col)
+getPos (TokenDiv      (AlexPn _ line col)  ) = ("Div",      line, col)
+getPos (TokenInt      (AlexPn _ line col) _) = ("Int",      line, col)
+getPos (TokenMinus    (AlexPn _ line col)  ) = ("Minus",    line, col)
+getPos (TokenLCurly   (AlexPn _ line col)  ) = ("LCurly",   line, col)
+getPos (TokenRCurly   (AlexPn _ line col)  ) = ("RCurly",   line, col)
+getPos (TokenDisj     (AlexPn _ line col)  ) = ("Disj",     line, col)
+getPos (TokenConj     (AlexPn _ line col)  ) = ("Conj",     line, col)
+getPos (TokenFunc     (AlexPn _ line col)  ) = ("Func",     line, col)
+getPos (TokenNot      (AlexPn _ line col)  ) = ("Not",      line, col)
+getPos (TokenReturn   (AlexPn _ line col)  ) = ("Return",   line, col)
 
 trim :: [Token] -> [Token]
 trim = reverse . trimNL . reverse . trimNL

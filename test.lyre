@@ -1,1 +1,4 @@
-func HelloWorld () { }
+func HelloWorld () {
+  let hello = 12
+  return hello
+}
