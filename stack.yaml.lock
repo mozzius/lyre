@@ -3,7 +3,18 @@
 # For more information, please see the documentation at:
 #   https://docs.haskellstack.org/en/stable/lock_files
 
-packages: []
+packages:
+- completed:
+    size: 2417629
+    url: https://github.com/hamler-lang/CoreErlang/archive/c0466e103b312f32afe23c4f484b534c1591a0b2.tar.gz
+    name: CoreErlang
+    version: 0.0.5
+    sha256: a83f2d69604d3e79fe3ef1e95f48bf472e5c53b06b5499100d79733c95dbd145
+    pantry-tree:
+      size: 11867
+      sha256: 648aa8650a74d9772184500b8640a055c23fb47d02dfd5514311194480beb23f
+  original:
+    url: https://github.com/hamler-lang/CoreErlang/archive/c0466e103b312f32afe23c4f484b534c1591a0b2.tar.gz
 snapshots:
 - completed:
     size: 532177

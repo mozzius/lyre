@@ -5,7 +5,7 @@ import Lexer
 import Data.List
 }
 
-%name program StatementsEmptyable
+%name program OptStatements
 %tokentype { Token }
 %error { parseError }
 
@@ -15,6 +15,7 @@ import Data.List
   int     { TokenInt _ $$ }
   return  { TokenReturn _ }
   func    { TokenFunc _ }
+  ','     { TokenComma _ }
   '!'     { TokenNot _ }
   '='     { TokenEq _ }
   '+'     { TokenPlus _ }
@@ -33,9 +34,9 @@ import Data.List
 
 Block
   : Expression                              { Expr $1 }
-  | '{' OptNL StatementsEmptyable OptNL '}' { Curly $3 }
+  | '{' OptNL OptStatements OptNL '}' { Curly $3 }
 
-StatementsEmptyable
+OptStatements
   : Statements                              { $1 }
   |                                         { [] }
 
@@ -46,10 +47,18 @@ Statements
 Statement
   : Assignment                              { $1 }
   | return Expression                       { Return $2 }
-  | func var '(' ')' Block                  { FuncDef $2 $5 }
+  | func var '(' OptArguments ')' Block     { FuncDef $2 $4 $6 }
 
 Assignment
   : let var '=' Expression                  { Let $2 $4 }
+
+OptArguments
+  : Arguments                               { $1 }
+  |                                         { [] }
+
+Arguments
+  : var ',' Arguments                       { $1:$3 }
+  | var                                     { [$1] }
 
 Expression
   : Expression '||' Expression              { BinOp Or $1 $3 }
@@ -76,10 +85,11 @@ Term
 Factor
   : var                                     { Var $1 }
   | int                                     { Int (read $1) }
+  | var '(' ')'                             { FuncCall $1 }
   | '(' Expression ')'                      { Brack $2 }
 
 OptNL
-  : nl OptNL                                {}
+  : OptNL nl                                {}
   |                                         {}
 
 
@@ -88,7 +98,10 @@ OptNL
 parseError :: [Token] -> a
 parseError tokens = error 
   $ let (token, line, col) = getPos $ head tokens
-    in "Parse error: unexpected " ++ token ++ " at line " ++ show line ++ ", column " ++ show col ++ "\n" ++ concat (map (\t -> show t) tokens)
+    in "Parse error: unexpected " ++ token
+      ++ " at line " ++ show line
+      ++ ", column " ++ show col
+      ++ "\n" ++ concat (map (\t -> show t ++ "\n") tokens)
 parseError [] = error "No tokens found"
 
 parseProgram :: String -> Stmts

@@ -14,7 +14,7 @@ import GHC.Generics (Generic)
 %wrapper "posn"
 
 $digit         = 0-9
-$alpha         = [a-zA-Z\_\-]
+$alpha         = [a-zA-Z\_]
 $lower         = [a-z]
 $upper         = [A-Z]
 $eol           = [\n]
@@ -34,7 +34,6 @@ tokens :-
   "//".*                        ;
   lang\.@langPrag               { \p s -> TokenLang p s }
   let                           { \p _ -> TokenLet p }
-  in                            { \p _ -> TokenIn p }
   of                            { \p _ -> TokenOf p }
   func                          { \p _ -> TokenFunc p }
   return                        { \p _ -> TokenReturn p }
@@ -53,12 +52,12 @@ tokens :-
   "-"                           { \p _ -> TokenMinus p }
   "<"                           { \p _ -> TokenLPair p }
   ">"                           { \p _ -> TokenRPair p }
-  ", "                          { \p _ -> TokenMPair p }
   \.                            { \p _ -> TokenDot p }
   \@                            { \p _ -> TokenAt p }
   "||"                          { \p _ -> TokenDisj p }
   "&&"                          { \p _ -> TokenConj p }
   "!"                           { \p _ -> TokenNot p }
+  ","                           { \p _ -> TokenComma p }
 
 {
 
@@ -69,12 +68,8 @@ data Token
   | TokenSep      AlexPosn
   | TokenFix      AlexPosn
   | TokenLet      AlexPosn
-  | TokenIn       AlexPosn
-  | TokenTyLambda AlexPosn
-  | TokenLambda   AlexPosn
   | TokenSym      AlexPosn String
   | TokenZero     AlexPosn
-  | TokenSucc     AlexPosn
   | TokenArrow    AlexPosn
   | TokenEq       AlexPosn
   | TokenLParen   AlexPosn
@@ -87,7 +82,6 @@ data Token
   | TokenPlus     AlexPosn
   | TokenLPair    AlexPosn
   | TokenRPair    AlexPosn
-  | TokenMPair    AlexPosn
   | TokenFst      AlexPosn
   | TokenSnd      AlexPosn
   | TokenInl      AlexPosn
@@ -106,6 +100,7 @@ data Token
   | TokenFunc     AlexPosn
   | TokenNot      AlexPosn
   | TokenReturn   AlexPosn
+  | TokenComma    AlexPosn
   deriving (Eq, Show, Generic)
 
 symString :: Token -> String
@@ -122,12 +117,8 @@ getPos (TokenOf       (AlexPn _ line col)  ) = ("Of",       line, col)
 getPos (TokenSep      (AlexPn _ line col)  ) = ("Sep",      line, col)
 getPos (TokenFix      (AlexPn _ line col)  ) = ("Fix",      line, col)
 getPos (TokenLet      (AlexPn _ line col)  ) = ("Let",      line, col)
-getPos (TokenIn       (AlexPn _ line col)  ) = ("In",       line, col)
-getPos (TokenTyLambda (AlexPn _ line col)  ) = ("TyLambda", line, col)
-getPos (TokenLambda   (AlexPn _ line col)  ) = ("Lambda",   line, col)
 getPos (TokenSym      (AlexPn _ line col) _) = ("Sym",      line, col)
 getPos (TokenZero     (AlexPn _ line col)  ) = ("Zero",     line, col)
-getPos (TokenSucc     (AlexPn _ line col)  ) = ("Succ",     line, col)
 getPos (TokenArrow    (AlexPn _ line col)  ) = ("Arrow",    line, col)
 getPos (TokenEq       (AlexPn _ line col)  ) = ("Eq",       line, col)
 getPos (TokenLParen   (AlexPn _ line col)  ) = ("LParen",   line, col)
@@ -140,7 +131,6 @@ getPos (TokenTimes    (AlexPn _ line col)  ) = ("Times",    line, col)
 getPos (TokenPlus     (AlexPn _ line col)  ) = ("Plus",     line, col)
 getPos (TokenLPair    (AlexPn _ line col)  ) = ("LPair",    line, col)
 getPos (TokenRPair    (AlexPn _ line col)  ) = ("RPair",    line, col)
-getPos (TokenMPair    (AlexPn _ line col)  ) = ("MPair",    line, col)
 getPos (TokenFst      (AlexPn _ line col)  ) = ("Fst",      line, col)
 getPos (TokenSnd      (AlexPn _ line col)  ) = ("Snd",      line, col)
 getPos (TokenInl      (AlexPn _ line col)  ) = ("Inl",      line, col)
@@ -159,6 +149,7 @@ getPos (TokenConj     (AlexPn _ line col)  ) = ("Conj",     line, col)
 getPos (TokenFunc     (AlexPn _ line col)  ) = ("Func",     line, col)
 getPos (TokenNot      (AlexPn _ line col)  ) = ("Not",      line, col)
 getPos (TokenReturn   (AlexPn _ line col)  ) = ("Return",   line, col)
+getPos (TokenComma    (AlexPn _ line col)  ) = (",",        line, col)
 
 trim :: [Token] -> [Token]
 trim = reverse . trimNL . reverse . trimNL

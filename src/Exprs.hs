@@ -5,7 +5,7 @@ type Stmts = [Stmt]
 data Stmt
   = Let String Expr
   | Return Expr
-  | FuncDef String Block
+  | FuncDef String [String] Block
   deriving (Show)
 
 data BinOp
@@ -27,6 +27,7 @@ data Expr
   | Int Int
   | Var String
   | Brack Expr
+  | FuncCall String
   deriving (Show)
 
 data Block

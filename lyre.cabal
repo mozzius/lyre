@@ -4,11 +4,11 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: f9aa47554ddafd546cd87a72ab1920fad170869053a65a511995ffc2d85a20c1
+-- hash: 98b6f8a0c40680187fa5f4aebc62fee48eefe1e1da8336917f29c30be62b24ea
 
 name:           lyre
-version:        0.1.0.0
-description:    Please see the README on GitHub at <https://github.com/githubuser/lyre#readme>
+version:        0.1.0
+description:    Lyre is a funcitonal programming language that compiles to Erlang, aiming to implement a channel-based concurrency system
 homepage:       https://github.com/Mozzius/lyre#readme
 bug-reports:    https://github.com/Mozzius/lyre/issues
 author:         Samuel Newman
@@ -30,12 +30,14 @@ library
       Exprs
       Lexer
       Parser
+      Parser
   other-modules:
       Paths_lyre
   hs-source-dirs:
       src
   build-depends:
-      array
+      CoreErlang
+    , array
     , base >=4.7 && <5
     , filepath
     , text
@@ -52,7 +54,8 @@ executable lyre-exe
       alex
     , happy
   build-depends:
-      array
+      CoreErlang
+    , array
     , base >=4.7 && <5
     , filepath
     , lyre
