@@ -1,7 +1,7 @@
 module Main where
 
-import Exprs
-import Language.CoreErlang
+import Exprs ()
+import Language.CoreErlang ()
 import Parser (parseProgram)
 
 main :: IO ()

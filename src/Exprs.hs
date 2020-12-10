@@ -27,7 +27,7 @@ data Expr
   | Int Int
   | Var String
   | Brack Expr
-  | FuncCall String
+  | FuncCall String [Expr]
   deriving (Show)
 
 data Block

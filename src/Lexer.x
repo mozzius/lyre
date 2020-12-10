@@ -20,6 +20,7 @@ $upper         = [A-Z]
 $eol           = [\n]
 $alphanum      = [$alpha $digit]
 @sym           = $alpha($alphanum)*
+@funccall      = $alpha($alphanum)*\(
 @int           = \-? $digit+
 @charLiteral   = \' ([\\.]|[^\']| . ) \'
 @stringLiteral = \"(\\.|[^\"]|\n)*\"
@@ -42,6 +43,7 @@ tokens :-
   "->"                          { \p _ -> TokenArrow p }
   \\                            { \p _ -> TokenDiv p }
   \=                            { \p _ -> TokenEq p }
+  @funccall                     { \p s -> TokenFuncCall p s }
   \(                            { \p _ -> TokenLParen p }
   \)                            { \p _ -> TokenRParen p }
   \{                            { \p _ -> TokenLCurly p }
@@ -89,9 +91,10 @@ data Token
   | TokenForall   AlexPosn
   | TokenDot      AlexPosn
   | TokenAt       AlexPosn
-  | TokenVar      AlexPosn String
   | TokenDiv      AlexPosn
+  | TokenVar      AlexPosn String
   | TokenInt      AlexPosn String
+  | TokenFuncCall AlexPosn String
   | TokenMinus    AlexPosn
   | TokenLCurly   AlexPosn
   | TokenRCurly   AlexPosn
@@ -150,6 +153,7 @@ getPos (TokenFunc     (AlexPn _ line col)  ) = ("Func",     line, col)
 getPos (TokenNot      (AlexPn _ line col)  ) = ("Not",      line, col)
 getPos (TokenReturn   (AlexPn _ line col)  ) = ("Return",   line, col)
 getPos (TokenComma    (AlexPn _ line col)  ) = (",",        line, col)
+getPos (TokenFuncCall (AlexPn _ line col) _) = ("FuncCall", line, col)
 
 trim :: [Token] -> [Token]
 trim = reverse . trimNL . reverse . trimNL
