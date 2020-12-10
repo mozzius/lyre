@@ -33,70 +33,69 @@ import Data.List
 
 %%
 
-Block
+Block :: { Block }
   : Expression                              { Expr $1 }
   | '{' OptNL OptStatements OptNL '}'       { Curly $3 }
 
-OptStatements
+OptStatements :: { Stmts }
   : Statements                              { $1 }
   |                                         { [] }
 
-Statements
+Statements :: { Stmts }
   : Statement nl OptNL Statements           { $1:$4 }
   | Statement                               { [$1] }
 
-Statement
+Statement :: { Stmt }
   : Assignment                              { $1 }
   | return Expression                       { Return $2 }
-  | func var '(' OptArguments ')' Block     { FuncDef $2 $4 $6 }
-  | funccall OptExprList ')'                { FuncCall $1 $2 }
+  | func funccall OptArguments ')' Block    { FuncDef $2 $3 $5 }
 
-Assignment
+Assignment :: { Stmt }
   : let var '=' Expression                  { Let $2 $4 }
 
-OptArguments
+OptArguments :: { [String] }
   : Arguments                               { $1 }
   |                                         { [] }
 
-Arguments
+Arguments :: { [String] }
   : var ',' Arguments                       { $1:$3 }
   | var                                     { [$1] }
 
-OptExprList
+OptExprList :: { [Expr] }
   : ExprList                                { $1 }
   |                                         { [] }
 
-ExprList
+ExprList :: { [Expr] }
   : Expression ',' ExprList                 { $1:$3 }
   | Expression                              { [$1] }
 
-
-Expression
+Expression :: { Expr }
   : Expression '||' Expression              { BinOp Or $1 $3 }
   | Conjunction                             { $1 }
 
-Conjunction
+Conjunction :: { Expr }
   : Conjunction '&&' Conjunction            { BinOp And $1 $3 }
   | Inversion                               { $1 }
 
-Inversion
+Inversion :: { Expr }
   : '!' Inversion                           { UnaOp Inv $2 }
   | Sum                                     { $1 }
 
-Sum
+Sum :: { Expr }
   : Sum '+' Term                            { BinOp Plus $1 $3 }
   | Sum '-' Term                            { BinOp Minus $1 $3 }
   | Term                                    { $1 }
 
-Term
+Term :: { Expr }
   : Term '*' Factor                         { BinOp Times $1 $3 }
   | Term '/' Factor                         { BinOp Div $1 $3 }
   | Factor                                  { $1 }
 
-Factor
+Factor :: { Expr }
   : var                                     { Var $1 }
   | int                                     { Int (read $1) }
   | '(' Expression ')'                      { Brack $2 }
+  | funccall OptExprList ')'                { FuncCall $1 $2 }
 
 OptNL
   : OptNL nl                                {}

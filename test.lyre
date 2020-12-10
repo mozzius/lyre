@@ -1,5 +1,3 @@
 func add(arg1, arg2) {
   let res = arg1 + (arg2 - arg2 * arg1)
-  return res
-  
-}
+  return res}
