@@ -9,7 +9,7 @@ import Data.List
 %tokentype { Token }
 %error { parseError }
 
-%token 
+%token
   let      { TokenLet _ }
   var      { TokenVar _ $$ }
   int      { TokenInt _ $$ }
@@ -35,7 +35,7 @@ import Data.List
 
 Block :: { Block }
   : Expression                              { Expr $1 }
-  | '{' OptNL OptStatements OptNL '}'       { Curly $3 }
+  | '{' OptNL Statements '}'                { Curly $3 }
 
 OptStatements :: { Stmts }
   : Statements                              { $1 }
@@ -43,6 +43,7 @@ OptStatements :: { Stmts }
 
 Statements :: { Stmts }
   : Statement nl OptNL Statements           { $1:$4 }
+  | Statement nl OptNL                      { [$1] }
   | Statement                               { [$1] }
 
 Statement :: { Stmt }
@@ -101,11 +102,10 @@ OptNL
   : OptNL nl                                {}
   |                                         {}
 
-
 {
 
 parseError :: [Token] -> a
-parseError tokens = error 
+parseError tokens = error
   $ let (token, line, col) = getPos $ head tokens
     in "Parse error: unexpected " ++ token
       ++ " at line " ++ show line

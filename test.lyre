@@ -1,3 +1,4 @@
-func add(arg1, arg2) {
-  let res = arg1 + (arg2 - arg2 * arg1)
-  return res}
+func main() {
+  let x = y()
+  return x + 25 - z(2 * 2)
+}
