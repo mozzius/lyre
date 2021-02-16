@@ -4,7 +4,7 @@ description: Lyre is a funcitonal programming language that compiles to Erlang, 
 github: "Mozzius/lyre"
 license: BSD3
 author: "Samuel Newman"
-maintainer: "samuel@felixnewman.com"
+maintainer: "sfn3@kent.ac.uk"
 copyright: "2020 Samuel Newman"
 
 extra-source-files:
@@ -16,18 +16,19 @@ extra-source-files:
 # category:            Web
 
 dependencies:
-  - base >= 4.7 && < 5
+  - base >=4.7 && <=4.11
   - array
   - text
   - filepath
-  - CoreErlang
+  - CoreErlang ==0.0.4
+  - process
 
 library:
   source-dirs: src
 
 executables:
   lyre-exe:
-    main: Main.hs
+    main: src/Main.hs
     source-dirs: .
     ghc-options:
       - -threaded

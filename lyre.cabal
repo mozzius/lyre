@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 53a5bb66b317c601a873779c58f9683d71b6a17bf3a679ea21c47c19ac7512bf
+-- hash: 6104786749c3f833ab15b6643c5491c7841b0778486705b741c356e384c170fe
 
 name:           lyre
 version:        0.1.0
@@ -12,7 +12,7 @@ description:    Lyre is a funcitonal programming language that compiles to Erlan
 homepage:       https://github.com/Mozzius/lyre#readme
 bug-reports:    https://github.com/Mozzius/lyre/issues
 author:         Samuel Newman
-maintainer:     samuel@felixnewman.com
+maintainer:     sfn3@kent.ac.uk
 copyright:      2020 Samuel Newman
 license:        BSD3
 license-file:   LICENSE
@@ -27,25 +27,27 @@ source-repository head
 
 library
   exposed-modules:
-      Erlangify
-      Exprs
-      Lexer
-      Parser
-      Pretty
+      Language.Erlangify
+      Language.Exprs
+      Language.Lexer
+      Language.Parser
+      Language.Pretty
+      Main
   other-modules:
       Paths_lyre
   hs-source-dirs:
       src
   build-depends:
-      CoreErlang
+      CoreErlang ==0.0.4
     , array
-    , base >=4.7 && <5
+    , base >=4.7 && <=4.11
     , filepath
+    , process
     , text
   default-language: Haskell2010
 
 executable lyre-exe
-  main-is: Main.hs
+  main-is: src/Main.hs
   other-modules:
       Paths_lyre
   hs-source-dirs:
@@ -55,10 +57,11 @@ executable lyre-exe
       alex
     , happy
   build-depends:
-      CoreErlang
+      CoreErlang ==0.0.4
     , array
-    , base >=4.7 && <5
+    , base >=4.7 && <=4.11
     , filepath
     , lyre
+    , process
     , text
   default-language: Haskell2010

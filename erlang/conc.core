@@ -1,0 +1,53 @@
+module 'conc' ['module_info'/0,
+	       'module_info'/1,
+	       'printer'/0,
+	       'start'/0]
+    attributes [%% Line 1
+		'file' =
+		    %% Line 1
+		    [{[99|[111|[110|[99|[46|[101|[114|[108]]]]]]]],1}]]
+'printer'/0 =
+    %% Line 5
+    fun () ->
+	%% Line 6
+	receive
+	  %% Line 7
+	  <'stop'> when 'true' ->
+	      'stop'
+	  %% Line 8
+	  <Msg> when 'true' ->
+	      do  call 'io':'format'
+		      ([82|[101|[99|[101|[105|[118|[101|[100|[58|[32|[126|[112|[126|[110]]]]]]]]]]]]]], [Msg|[]])
+		  apply 'printer'/0
+		      ()
+	after 'infinity' ->
+	  'true'
+'start'/0 =
+    %% Line 11
+    fun () ->
+	let <PID> =
+	    call %% Line 12
+		 'erlang':%% Line 12
+			  'spawn'
+		(%% Line 12
+		 'conc', %% Line 12
+			 'printer', %% Line 12
+				    [])
+	in  do  %% Line 13
+		call 'erlang':'!'
+		    (PID, [104|[101|[108|[108|[111]]]]])
+		do  %% Line 14
+		    call 'erlang':'!'
+			(PID, [119|[111|[114|[108|[100]]]]])
+		    %% Line 15
+		    call 'erlang':'!'
+			(PID, 'stop')
+'module_info'/0 =
+    fun () ->
+	call 'erlang':'get_module_info'
+	    ('conc')
+'module_info'/1 =
+    fun (_0) ->
+	call 'erlang':'get_module_info'
+	    ('conc', _0)
+end

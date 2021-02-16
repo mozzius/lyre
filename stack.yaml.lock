@@ -5,20 +5,20 @@
 
 packages:
 - completed:
-    size: 2417629
-    url: https://github.com/hamler-lang/CoreErlang/archive/c0466e103b312f32afe23c4f484b534c1591a0b2.tar.gz
+    size: 10028
+    url: https://github.com/amtal/CoreErlang/archive/410cc94f9f8b15e652029ee483ddd42280d0b3de.tar.gz
     name: CoreErlang
-    version: 0.0.5
-    sha256: a83f2d69604d3e79fe3ef1e95f48bf472e5c53b06b5499100d79733c95dbd145
+    version: 0.0.4
+    sha256: f285c8b5051d112f190f747be964b184b64719cabcc874fa588126a5c6957190
     pantry-tree:
-      size: 11867
-      sha256: 648aa8650a74d9772184500b8640a055c23fb47d02dfd5514311194480beb23f
+      size: 455
+      sha256: 2575a47eccb7cdf0dff9725ed2d614acd614fe39051495976dc6e52a39e06929
   original:
-    url: https://github.com/hamler-lang/CoreErlang/archive/c0466e103b312f32afe23c4f484b534c1591a0b2.tar.gz
+    url: https://github.com/amtal/CoreErlang/archive/410cc94f9f8b15e652029ee483ddd42280d0b3de.tar.gz
 snapshots:
 - completed:
-    size: 532177
-    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/16/20.yaml
-    sha256: 0e14ba5603f01e8496e8984fd84b545a012ca723f51a098c6c9d3694e404dc6d
+    size: 537868
+    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/9/21.yaml
+    sha256: 0a3be91c2bce851de4755003cfb1d85d62b6f90276231fcc305729c0c5c864a9
   original:
-    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/16/20.yaml
+    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/9/21.yaml

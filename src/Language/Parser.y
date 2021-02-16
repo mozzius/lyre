@@ -1,7 +1,7 @@
 {
-module Parser where
-import Exprs
-import Lexer
+module Language.Parser where
+import Language.Exprs
+import Language.Lexer
 import Data.List
 }
 

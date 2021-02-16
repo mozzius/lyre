@@ -1,6 +1,6 @@
-module Pretty where
+module Language.Pretty where
 
-import Exprs
+import Language.Exprs
 
 prettys :: Stmts -> String
 prettys = concatMap (\x -> pretty x ++ " ")

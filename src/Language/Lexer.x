@@ -4,7 +4,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE DeriveGeneric #-}
 
-module Lexer (Token(..),scanTokens,symString,getPos) where
+module Language.Lexer (Token(..),scanTokens,symString,getPos) where
 
 import Data.Text (Text)
 import GHC.Generics (Generic)

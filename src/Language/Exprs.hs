@@ -1,4 +1,4 @@
-module Exprs where
+module Language.Exprs where
 
 type Stmts = [Stmt]
 
