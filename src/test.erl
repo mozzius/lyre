@@ -1,6 +1,6 @@
 -module(test).
 
--export([hello/0]).
+-export([world/3]).
 
-hello() -> 
-  "hello world".
+world(X, Y, Z) ->
+    lists:map(fun (F) -> [F, F] end, [X, Y, Z]).

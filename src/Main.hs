@@ -1,18 +1,29 @@
 module Main where
 
--- import Erlangify (erlangify)
-
 import Language.CoreErlang.Parser (parseModule)
+import System.Process (callCommand)
+
+import Language.Erlangify (stringToList)
 import Language.Parser (parseProgram)
-import System.Process
 
 main :: IO ()
-main =
-  do
-    -- file <- readFile "test.lyre"
-    -- print $ parseProgram file
-    -- print . erlangify . parseProgram $ file
-    file <- readFile "./test.core"
-    print $ parseModule file
+main = erlc
 
-    -- callCommand "erlc output.core"
+test = do
+  print $ stringToList "hello"
+
+
+parse = do
+  file <- readFile "test.lyre"
+  print $ parseProgram file
+  print . parseProgram $ file
+
+erlc = do
+  callCommand "erlc +to_core -o src src\\test.erl "
+  file <- readFile "src\\test.core"
+
+  print "===================="
+  print file
+  print "==== CoreErlang ===="
+  print $ parseModule file
+  print "===================="

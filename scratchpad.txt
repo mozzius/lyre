@@ -34,3 +34,6 @@ worker helloWorldWorker(chan) implements basicWorker  {
 chan = spawn(stringRepeatingWorker)
 send(chan)
 print(recv(chan))
+
+(Exp (Constr (List (LL [Exp (Constr (Lit (LInt 97)))] (Exp (Constr (List (LL [Exp (Constr (Lit (LInt 97)))] (Exp (Constr (List (LL [Exp (Constr (Lit (LInt 97)))] (Exp (Constr (List (LL [Exp (Constr (Lit (LInt 97)))] (Exp (Constr (List (LL [Exp (Constr (Lit (LInt 97)))] (Exp (Constr (List (L [Exp (Constr (Lit (LInt 97)))]))))))))))))))))))))))))))
+(Exp (Constr (List (LL [Exp (Constr (Lit (LInt 104)))] (Exp (Constr (List (LL [Exp (Constr (Lit (LInt 101)))] (Exp (Constr (List (LL [Exp (Constr (Lit (LInt 108)))] (Exp (Constr (List (LL [Exp (Constr (Lit (LInt 108)))] (Exp (Constr (List (L [Exp (Constr (Lit (LInt 111)))]))))))))))))))))))))

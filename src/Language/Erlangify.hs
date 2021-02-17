@@ -1,43 +1,73 @@
 module Language.Erlangify where
 
--- import Exprs as L
--- import Language.CoreErlang as E
+import Language.Exprs as L
+import Language.CoreErlang.Syntax as E
+import Data.Char (ord)
 
--- -- Main function that takes the parsed program and turns it into erlang
--- erlangify :: L.Stmts -> String
--- erlangify e = E.pretty $ erlify e
+-- module 'filename' ['hello'/0,
+-- 	       'module_info'/0,
+-- 	       'module_info'/1]
+--     attributes [%% Line 1
+-- 		'file' =
+-- 		    %% Line 1
+-- 		    [{ {- filename as list -} ,1}]]
+-- -- ur code goes here
+-- 'module_info'/0 =
+--     fun () ->
+-- 	call 'erlang':'get_module_info'
+-- 	    ('filename')
+-- 'module_info'/1 =
+--     fun (_0) ->
+-- 	call 'erlang':'get_module_info'
+-- 	    ('filename', _0)
+-- end
 
--- erlifys = concatMap erlify
+constructList :: [E.Exps] -> E.Exps
+constructList []  = E.Exp (E.Constr (E.Lit E.LNil))
+constructList [x] = (E.Exp (E.Constr (E.List (E.L [x]))))
+constructList (x:xs) =
+  (E.Exp (E.Constr (E.List (E.LL [x] (constructList xs)))))
 
--- class Erlify e where
---   erlify :: e -> erlang
+stringToList :: String -> E.Exps
+stringToList str = constructList
+  $ map (\x -> E.Exp (E.Constr (E.Lit (E.LInt (toInteger $ ord x))))) str
 
--- instance Erlify L.Stmt where
---   erlify (L.Let name expr) = "LET " ++ name ++ " " ++ erlify expr
---   erlify (L.Return expr) = "RETURN " ++ erlify expr
---   erlify (L.FuncDef name args block) = "FUNC " ++ init name ++ " " ++ unwords args ++ " " ++ erlify block
+-- -- constructConstList :: [a] -> E.Exps
+-- constructConstList []  = E.Exp (E.Constr (E.CLit E.LNil))
+-- constructConstList [x] = (E.Exp (E.Constr (E.CList (E.L [x]))))
+-- constructConstList (x:xs) =
+--   (E.Exp (E.Constr (E.CList (E.LL [x] (constructConstList xs)))))
 
--- instance Erlify L.BinOp where
---   erlify L.Or = "OR "
---   erlify L.And = "AND "
---   erlify L.Plus = "PLUS "
---   erlify L.Minus = "MINUS "
---   erlify L.Div = "DIV "
---   erlify L.Times = "TIMES "
+-- -- stringToConstList :: string -> E.Exps
+-- stringToConstList str = constructConstList
+--   $ map (\x -> E.Exp (E.Constr (E.CLit (E.LInt (toInteger $ ord x))))) str
 
--- instance Erlify L.UnaOp where
---   erlify Inv = "NOT "
+-- constructLambda :: [string] -> E.Exps -> E.Constr
 
--- instance Erlify L.Expr where
---   erlify (L.BinOp operator exp1 exp2) = "EXPR " ++ erlify operator ++ erlify exp1 ++ erlify exp2
---   erlify (L.UnaOp operator exp) = "EXPR " ++ erlify operator ++ erlify exp
---   erlify (L.Int integer) = show integer ++ " "
---   erlify (L.Var name) = name ++ " "
---   erlify (L.Brack exp) = erlify exp
---   erlify (L.FuncCall name exps) =
---     "CALL " ++ init name ++ " "
---       ++ concatMap (\x -> erlify x ++ " ") exps
 
--- instance Erlify L.Block where
---   erlify (L.Curly stmts) = erlifys stmts
---   erlify (L.Expr exp) = erlify exp
+-- FunDef
+--   (Constr (Function (Atom "module_info", 1)))
+--   ( Constr
+--     ( Lambda
+--       ["_0"]
+--       ( Exp
+--         ( Constr
+--           ( ModCall
+--             ( Exp (Constr (Lit (LAtom (Atom "erlang"))))
+--             , Exp (Constr (Lit (LAtom (Atom "get_module_info"))))
+--             )
+--             [ Exp (Constr (Lit (LAtom (Atom "test"))))
+--             , Exp (Constr (Var "_0"))
+--             ]
+--           )
+--         )
+--       )
+--     )
+--   )
+
+constructFunc :: String -> [String] -> E.Exps -> E.FunDef
+constructFunc name args body =
+  let arity = toInteger $ length args
+  in  ( E.FunDef (E.Constr (E.Function (E.Atom name, 0)))
+                 (E.Constr (E.Lambda args body))
+      )
