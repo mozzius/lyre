@@ -1,4 +1,3 @@
 func main() {
-  let x = y()
-  return x + 25 - z(2 * 2)
+  let str = 122
 }

@@ -25,6 +25,7 @@ data Expr
   = BinOp BinOp Expr Expr
   | UnaOp UnaOp Expr
   | Int Int
+  | String String
   | Var String
   | Brack Expr
   | FuncCall String [Expr]

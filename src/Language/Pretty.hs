@@ -11,7 +11,7 @@ class Pretty p where
 instance Pretty Stmt where
   pretty (Let name expr) = "LET " ++ name ++ " " ++ pretty expr
   pretty (Return expr) = "RETURN " ++ pretty expr
-  pretty (FuncDef name args block) = "FUNC " ++ init name ++ " " ++ unwords args ++ " " ++ pretty block
+  pretty (FuncDef name args block) = "FUNC " ++ name ++ " " ++ unwords args ++ " " ++ pretty block
 
 instance Pretty BinOp where
   pretty Or = "OR "
@@ -30,7 +30,7 @@ instance Pretty Expr where
   pretty (Int integer) = show integer ++ " "
   pretty (Var name) = name ++ " "
   pretty (Brack exp) = pretty exp
-  pretty (FuncCall name exps) = "CALL " ++ init name ++ " "
+  pretty (FuncCall name exps) = "CALL " ++ name ++ " "
     ++ concatMap (\x -> pretty x ++ " ") exps
 
 instance Pretty Block where

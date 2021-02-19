@@ -10,26 +10,27 @@ import Data.List
 %error { parseError }
 
 %token
-  let      { TokenLet _ }
-  var      { TokenVar _ $$ }
-  int      { TokenInt _ $$ }
-  return   { TokenReturn _ }
-  func     { TokenFunc _ }
-  funccall { TokenFuncCall _ $$ }
-  ','      { TokenComma _ }
-  '!'      { TokenNot _ }
-  '='      { TokenEq _ }
-  '+'      { TokenPlus _ }
-  '-'      { TokenMinus _ }
-  '*'      { TokenTimes _ }
-  '/'      { TokenDiv _ }
-  '('      { TokenLParen _ }
-  ')'      { TokenRParen _ }
-  '{'      { TokenLCurly _ }
-  '}'      { TokenRCurly _ }
-  '||'     { TokenDisj _ }
-  '&&'     { TokenConj _ }
-  nl       { TokenNL _ }
+  let           { TokenLet _ }
+  var           { TokenVar _ $$ }
+  int           { TokenInt _ $$ }
+  stringLiteral { TokenStringLiteral _ $$ }
+  return        { TokenReturn _ }
+  func          { TokenFunc _ }
+  funccall      { TokenFuncCall _ $$ }
+  ','           { TokenComma _ }
+  '!'           { TokenNot _ }
+  '='           { TokenEq _ }
+  '+'           { TokenPlus _ }
+  '-'           { TokenMinus _ }
+  '*'           { TokenTimes _ }
+  '/'           { TokenDiv _ }
+  '('           { TokenLParen _ }
+  ')'           { TokenRParen _ }
+  '{'           { TokenLCurly _ }
+  '}'           { TokenRCurly _ }
+  '||'          { TokenDisj _ }
+  '&&'          { TokenConj _ }
+  nl            { TokenNL _ }
 
 %%
 
@@ -49,7 +50,7 @@ Statements :: { Stmts }
 Statement :: { Stmt }
   : Assignment                              { $1 }
   | return Expression                       { Return $2 }
-  | func funccall OptArguments ')' Block    { FuncDef $2 $3 $5 }
+  | func funccall OptArguments ')' Block    { FuncDef (init $2) $3 $5 }
 
 Assignment :: { Stmt }
   : let var '=' Expression                  { Let $2 $4 }
@@ -95,8 +96,9 @@ Term :: { Expr }
 Factor :: { Expr }
   : var                                     { Var $1 }
   | int                                     { Int (read $1) }
+  | stringLiteral                           { String (init . tail $ $1) }
   | '(' Expression ')'                      { Brack $2 }
-  | funccall OptExprList ')'                { FuncCall $1 $2 }
+  | funccall OptExprList ')'                { FuncCall (init $1) $2 }
 
 OptNL
   : OptNL nl                                {}

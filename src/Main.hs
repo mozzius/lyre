@@ -7,16 +7,15 @@ import Language.Erlangify (stringToList)
 import Language.Parser (parseProgram)
 
 main :: IO ()
-main = erlc
+main = parse
 
 test = do
   print $ stringToList "hello"
 
 
 parse = do
-  file <- readFile "test.lyre"
+  file <- readFile "src\\test.lyre"
   print $ parseProgram file
-  print . parseProgram $ file
 
 erlc = do
   callCommand "erlc +to_core -o src src\\test.erl "

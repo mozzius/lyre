@@ -1,6 +1,17 @@
 -module(test).
 
--export([world/3]).
+-export([printer/0, start/0]).
 
-world(X, Y, Z) ->
-    lists:map(fun (F) -> [F, F] end, [X, Y, Z]).
+printer() ->
+    receive
+      stop -> stop;
+      Msg -> io:format("Received: ~p~n", [Msg]), printer()
+    end.
+
+start() ->
+    PID = spawn(test, printer, []),
+    PID ! "hello",
+    PID ! "world",
+    PID ! stop.
+
+
