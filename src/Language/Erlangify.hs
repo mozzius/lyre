@@ -1,9 +1,5 @@
 module Language.Erlangify where
 
-import Language.Exprs as L
-import Language.CoreErlang.Syntax as E
-import Data.Char (ord)
-
 -- module 'filename' ['hello'/0,
 -- 	       'module_info'/0,
 -- 	       'module_info'/1]
@@ -21,16 +17,6 @@ import Data.Char (ord)
 -- 	call 'erlang':'get_module_info'
 -- 	    ('filename', _0)
 -- end
-
-constructList :: [E.Exps] -> E.Exps
-constructList []  = E.Exp (E.Constr (E.Lit E.LNil))
-constructList [x] = (E.Exp (E.Constr (E.List (E.L [x]))))
-constructList (x:xs) =
-  (E.Exp (E.Constr (E.List (E.LL [x] (constructList xs)))))
-
-stringToList :: String -> E.Exps
-stringToList str = constructList
-  $ map (\x -> E.Exp (E.Constr (E.Lit (E.LInt (toInteger $ ord x))))) str
 
 -- -- constructConstList :: [a] -> E.Exps
 -- constructConstList []  = E.Exp (E.Constr (E.CLit E.LNil))
@@ -64,10 +50,3 @@ stringToList str = constructList
 --       )
 --     )
 --   )
-
-constructFunc :: String -> [String] -> E.Exps -> E.FunDef
-constructFunc name args body =
-  let arity = toInteger $ length args
-  in  ( E.FunDef (E.Constr (E.Function (E.Atom name, 0)))
-                 (E.Constr (E.Lambda args body))
-      )

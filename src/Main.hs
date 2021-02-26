@@ -3,11 +3,11 @@ module Main where
 import Language.CoreErlang.Parser (parseModule)
 import System.Process (callCommand)
 
-import Language.Erlangify (stringToList)
+import Language.Compiler (stringToList)
 import Language.Parser (parseProgram)
 
 main :: IO ()
-main = parse
+main = erlc
 
 test = do
   print $ stringToList "hello"
