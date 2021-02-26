@@ -18,7 +18,7 @@ instance Compiler Lyre.Stmts Erl.Exps where
     case stmts of
       -- [] -> []
       ((Lyre.Let name expr):rest) ->
-        (Erl.Let ([underscore name] (compile expr)) (compile rest))
+        (Erl.Let ([underscore name], (compile expr)) (compile rest))
       ((Lyre.FuncDef name args block):rest) ->
         (Erl.Let ([underscore name], Erl.Exp (Erl.Constr (Erl.Lambda (map underscore args) (compile block)))) (compile rest))
       -- ((Lyre.Return expr):rest) -> (compile expr):(compile rest)
