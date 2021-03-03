@@ -13,7 +13,7 @@ channel([X|Xs]) ->
     receive
       close -> close;
       {send, Msg} -> X ! {self(), Msg}, channel(Xs);
-      {recv, PID} -> channel([X|Xs] ++ [PID])  % bad practice
+      {recv, PID} -> channel([X|Xs] ++ [PID])
     end.
 
 recv(Channel) ->

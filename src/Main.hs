@@ -7,7 +7,7 @@ import Language.Compiler (stringToList)
 import Language.Parser (parseProgram)
 
 main :: IO ()
-main = erlc
+main = parse
 
 test = do
   print $ stringToList "hello"

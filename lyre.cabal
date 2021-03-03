@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 7f5a921a65091333629873e841dafa77ee00ab03107a2a933c3a6d7d12409226
+-- hash: ba5e52f4b51490c89c3b8bfb74770388114b7a364bd5f5c31d5c6ad2c8912e26
 
 name:           lyre
 version:        0.1.0
@@ -29,10 +29,11 @@ library
   exposed-modules:
       Language.Compiler
       Language.Erlangify
-      Language.Exprs
       Language.Lexer
       Language.Parser
       Language.Pretty
+      Language.Syntax
+      Language.TypeChecker
       Main
   other-modules:
       Paths_lyre

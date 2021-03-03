@@ -1,6 +1,6 @@
 module Language.Pretty where
 
-import Language.Exprs
+import Language.Syntax
 
 prettys :: Stmts -> String
 prettys = concatMap (\x -> pretty x ++ " ")
@@ -9,9 +9,12 @@ class Pretty p where
   pretty :: p -> String
 
 instance Pretty Stmt where
-  pretty (Let name expr) = "LET " ++ name ++ " " ++ pretty expr
+  pretty (Let name typ expr) = "LET " ++ name ++ " " ++ pretty typ ++ pretty expr
   pretty (Return expr) = "RETURN " ++ pretty expr
-  pretty (FuncDef name args block) = "FUNC " ++ name ++ " " ++ unwords args ++ " " ++ pretty block
+  pretty (FuncDef name args typ block) = "FUNC " ++ name ++ " " ++ unwords (map pretty args) ++ " " ++ pretty typ ++ pretty block
+  pretty (If expr block) = "IF " ++ pretty expr ++ pretty block
+  pretty (IfElse expr block1 block2) = "IFELSE " ++ pretty expr ++ pretty block1 ++ pretty block2
+  pretty (IfElseIf expr block stmt) = "IF " ++ pretty expr ++ pretty stmt
 
 instance Pretty BinOp where
   pretty Or = "OR "
@@ -23,6 +26,13 @@ instance Pretty BinOp where
 
 instance Pretty UnaOp where
   pretty Inv = "NOT "
+
+instance Pretty Type where
+  pretty (Type types) = ": " ++ unwords types
+  pretty Untyped = ": UNTYPED "
+
+instance Pretty Argument where
+  pretty (Arg name typ) = name ++ " " ++ pretty typ
 
 instance Pretty Expr where
   pretty (BinOp operator exp1 exp2) = "EXPR " ++ pretty operator ++ pretty exp1 ++ pretty exp2

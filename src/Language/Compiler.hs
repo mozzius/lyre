@@ -3,7 +3,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 module Language.Compiler where
 
-import Language.Exprs as Lyre
+import Language.Syntax as Lyre
 import Language.CoreErlang.Syntax as Erl
 import Data.Char (ord)
 
@@ -13,39 +13,39 @@ class Compiler source target where
 underscore :: String -> String
 underscore str = "_" ++ str
 
-instance Compiler Lyre.Stmts Erl.Exps where
-  compile stmts = Erl.Exps (
-    case stmts of
-      -- [] -> []
-      ((Lyre.Let name expr):rest) ->
-        (Erl.Let ([underscore name], (compile expr)) (compile rest))
-      ((Lyre.FuncDef name args block):rest) ->
-        (Erl.Let ([underscore name], Erl.Exp (Erl.Constr (Erl.Lambda (map underscore args) (compile block)))) (compile rest))
-      -- ((Lyre.Return expr):rest) -> (compile expr):(compile rest)
-    )
+-- instance Compiler Lyre.Stmts Erl.Exps where
+--   compile stmts = Erl.Exps (Erl.Constr (
+--     case stmts of
+--       [] -> []
+--       ((Lyre.Let name expr):rest) ->
+--         [Erl.Constr (Erl.Let ([underscore name], (compile expr)) (compile rest))]
+--       ((Lyre.FuncDef name args block):rest) ->
+--         [Erl.Constr (Erl.Let ([underscore name], Erl.Exp (Erl.Constr (Erl.Lambda (map underscore args) (compile block)))) (compile rest))]
+--       ((Lyre.Return expr):rest) -> [(compile expr)]
+--     ))
 
--- instance Compiler Lyre.BinOp Erl.Exps where
---   compile Lyre.Or = "OR "
---   compile Lyre.And = "AND "
---   compile Lyre.Plus = "PLUS "
---   compile Lyre.Minus = "MINUS "
---   compile Lyre.Div = "DIV "
---   compile Lyre.Times = "TIMES "
+-- -- instance Compiler Lyre.BinOp Erl.Exps where
+-- --   compile Lyre.Or = "OR "
+-- --   compile Lyre.And = "AND "
+-- --   compile Lyre.Plus = "PLUS "
+-- --   compile Lyre.Minus = "MINUS "
+-- --   compile Lyre.Div = "DIV "
+-- --   compile Lyre.Times = "TIMES "
 
--- instance Compiler Lyre.UnaOp Erl.Exps where
---   compile Inv = "NOT "
+-- -- instance Compiler Lyre.UnaOp Erl.Exps where
+-- --   compile Inv = "NOT "
 
-instance Compiler Lyre.Expr Erl.Exps where
-  -- compile (Lyre.BinOp operator expr1 expr2)
-  -- compile (Lyre.UnaOp operator expr)
-  compile (Lyre.Int integer) = Erl.Exp (Erl.Constr(Erl.Lit (Erl.LInt (toInteger integer))))
-  compile (Lyre.Var name) = Erl.Exp (Erl.Constr(Erl.Var (underscore name)))
-  compile (Lyre.Brack expr) = compile expr
-  compile (Lyre.FuncCall name args) = let arity = toInteger . length $ args in Erl.Exp(Erl.Constr(Erl.App(Erl.Exp (Erl.Constr(Erl.Fun(Erl.Function(Erl.Atom name, arity))))) (map compile args)))
+-- instance Compiler Lyre.Expr Erl.Exps where
+--   -- compile (Lyre.BinOp operator expr1 expr2)
+--   -- compile (Lyre.UnaOp operator expr)
+--   compile (Lyre.Int integer) = Erl.Exp (Erl.Constr(Erl.Lit (Erl.LInt (toInteger integer))))
+--   compile (Lyre.Var name) = Erl.Exp (Erl.Constr(Erl.Var (underscore name)))
+--   compile (Lyre.Brack expr) = compile expr
+--   compile (Lyre.FuncCall name args) = let arity = toInteger . length $ args in Erl.Exp(Erl.Constr(Erl.App(Erl.Exp (Erl.Constr(Erl.Fun(Erl.Function(Erl.Atom name, arity))))) (map compile args)))
 
-instance Compiler Lyre.Block Erl.Exps where
-  compile (Lyre.Curly stmts) = compile stmts
-  compile (Lyre.Expr expr) = compile expr
+-- instance Compiler Lyre.Block Erl.Exps where
+--   compile (Lyre.Curly stmts) = compile stmts
+--   compile (Lyre.Expr expr) = compile expr
 
 -- fundef = FunDef
 --   (Constr (Function (Atom "main", 0)))

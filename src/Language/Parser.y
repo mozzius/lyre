@@ -1,25 +1,29 @@
 {
 module Language.Parser where
-import Language.Exprs
+import Language.Syntax
 import Language.Lexer
 import Data.List
 }
 
-%name program OptStatements
+%name program Program
 %tokentype { Token }
 %error { parseError }
 
 %token
   let           { TokenLet _ }
+  if            { TokenIf _ }
+  else          { TokenElse _ }
   var           { TokenVar _ $$ }
   int           { TokenInt _ $$ }
   stringLiteral { TokenStringLiteral _ $$ }
+  bool          { TokenBoolean _ $$ }
   return        { TokenReturn _ }
   func          { TokenFunc _ }
-  funccall      { TokenFuncCall _ $$ }
+  funcName      { TokenFuncCall _ $$ }
+  ':'           { TokenColon _ }
   ','           { TokenComma _ }
   '!'           { TokenNot _ }
-  '='           { TokenEq _ }
+  '='           { TokenAssign _ }
   '+'           { TokenPlus _ }
   '-'           { TokenMinus _ }
   '*'           { TokenTimes _ }
@@ -30,79 +34,123 @@ import Data.List
   '}'           { TokenRCurly _ }
   '||'          { TokenDisj _ }
   '&&'          { TokenConj _ }
+  '<'           { TokenLThan _ }
+  '>'           { TokenGThan _ }
+  '=='          { TokenEq _ }
+  '!='          { TokenNEq _ }
+  '<='          { TokenLEq _ }
+  '>='          { TokenGEq _ } 
   nl            { TokenNL _ }
 
 %%
 
+Program :: { Stmts }
+  : Function nl OptNL Program                   { $1:$4 }
+  | Function nl OptNL                           { [$1] }
+  | Function                                    { [$1] }
+
 Block :: { Block }
-  : Expression                              { Expr $1 }
-  | '{' OptNL Statements '}'                { Curly $3 }
+  : Expression                                   { Expr $1 }
+  | '{' OptNL Statements '}'                     { Curly $3 }
 
 OptStatements :: { Stmts }
-  : Statements                              { $1 }
-  |                                         { [] }
+  : Statements                                   { $1 }
+  |                                              { [] }
 
 Statements :: { Stmts }
-  : Statement nl OptNL Statements           { $1:$4 }
-  | Statement nl OptNL                      { [$1] }
-  | Statement                               { [$1] }
+  : Statement nl OptNL Statements                { $1:$4 }
+  | Statement nl OptNL                           { [$1] }
+  | Statement                                    { [$1] }
 
 Statement :: { Stmt }
-  : Assignment                              { $1 }
-  | return Expression                       { Return $2 }
-  | func funccall OptArguments ')' Block    { FuncDef (init $2) $3 $5 }
+  : Assignment                                   { $1 }
+  | return Expression                            { Return $2 }
+  | Function                                     { $1 }
+  | If                                           { $1 }
+
+Type :: { Type }
+  : var Types                                    { Type ($1:$2) }
+
+Types :: { [String] }
+  : var Types                                    { $1:$2 }
+  |                                              { [] }
+
+OptType :: { Type }
+  : ':' Type                                     { $2 }
+  |                                              { Untyped }
 
 Assignment :: { Stmt }
-  : let var '=' Expression                  { Let $2 $4 }
+  : let var OptType '=' Expression               { Let $2 $3 $5 }
 
-OptArguments :: { [String] }
-  : Arguments                               { $1 }
-  |                                         { [] }
+If :: { Stmt }
+  : if '(' Expression ')' Block else If          { IfElseIf $3 $5 $7 }
+  | if '(' Expression ')' Block else Block       { IfElse $3 $5 $7 }
+  | if '(' Expression ')' Block                  { If $3 $5 }
 
-Arguments :: { [String] }
-  : var ',' Arguments                       { $1:$3 }
-  | var                                     { [$1] }
+Function :: { Stmt }
+  : func funcName OptArguments ')' OptType Block { FuncDef (init $2) $3 $5 $6 }
+
+OptArguments :: { [Argument] }
+  : Arguments                                    { $1 }
+  |                                              { [] }
+
+Arguments :: { [Argument] }
+  : var ':' Type ',' Arguments                   { (Arg $1 $3):$5 }
+  | var ':' Type                                 { [Arg $1 $3] }
 
 OptExprList :: { [Expr] }
-  : ExprList                                { $1 }
-  |                                         { [] }
+  : ExprList                                     { $1 }
+  |                                              { [] }
 
 ExprList :: { [Expr] }
-  : Expression ',' ExprList                 { $1:$3 }
-  | Expression                              { [$1] }
+  : Expression ',' ExprList                      { $1:$3 }
+  | Expression                                   { [$1] }
 
 Expression :: { Expr }
-  : Expression '||' Expression              { BinOp Or $1 $3 }
-  | Conjunction                             { $1 }
+  : Expression '||' Expression                   { BinOp Or $1 $3 }
+  | Conjunction                                  { $1 }
 
 Conjunction :: { Expr }
-  : Conjunction '&&' Conjunction            { BinOp And $1 $3 }
-  | Inversion                               { $1 }
+  : Conjunction '&&' Conjunction                 { BinOp And $1 $3 }
+  | Equality                                     { $1 }
 
-Inversion :: { Expr }
-  : '!' Inversion                           { UnaOp Inv $2 }
-  | Sum                                     { $1 }
+Equality :: { Expr }
+  : Equality '==' Equality                       { BinOp Equals $1 $3 }
+  | Equality '!=' Equality                       { BinOp NotEquals $1 $3 }
+  | Comparison                                   { $1 }
+
+Comparison :: { Expr }
+  : Equality '<' Equality                        { BinOp LessThan $1 $3 }
+  | Equality '<=' Equality                       { BinOp LessEq $1 $3 }
+  | Equality '>' Equality                        { BinOp GreaterThan $1 $3 }
+  | Equality '>=' Equality                       { BinOp GreaterEq $1 $3 }
+  | Sum                                          { $1 }
 
 Sum :: { Expr }
-  : Sum '+' Term                            { BinOp Plus $1 $3 }
-  | Sum '-' Term                            { BinOp Minus $1 $3 }
-  | Term                                    { $1 }
+  : Sum '+' Term                                 { BinOp Plus $1 $3 }
+  | Sum '-' Term                                 { BinOp Minus $1 $3 }
+  | Term                                         { $1 }
 
 Term :: { Expr }
-  : Term '*' Factor                         { BinOp Times $1 $3 }
-  | Term '/' Factor                         { BinOp Div $1 $3 }
-  | Factor                                  { $1 }
+  : Term '*' Factor                              { BinOp Times $1 $3 }
+  | Term '/' Factor                              { BinOp Div $1 $3 }
+  | Factor                                       { $1 }
+
+Inversion :: { Expr }
+  : '!' Inversion                                { UnaOp Inv $2 }
+  | Factor                                       { $1 }
 
 Factor :: { Expr }
-  : var                                     { Var $1 }
-  | int                                     { Int (read $1) }
-  | stringLiteral                           { String (init . tail $ $1) }
-  | '(' Expression ')'                      { Brack $2 }
-  | funccall OptExprList ')'                { FuncCall (init $1) $2 }
+  : var                                          { Var $1 }
+  | int                                          { Int (read $1) }
+  | bool                                         { Boolean ($1 == "true") }
+  | stringLiteral                                { String (init . tail $ $1) }
+  | '(' Expression ')'                           { Brack $2 }
+  | funcName OptExprList ')'                     { FuncCall (init $1) $2 }
 
 OptNL
-  : OptNL nl                                {}
-  |                                         {}
+  : OptNL nl                                     {}
+  |                                              {}
 
 {
 
