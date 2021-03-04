@@ -1,7 +1,6 @@
 -module(test).
 
--export([main/0]).
+-export([main/1]).
 
-test() -> hello.
 
-main() -> test().
+main(X) -> not X.

@@ -40,7 +40,7 @@ instance Pretty Expr where
   pretty (Int integer) = show integer ++ " "
   pretty (Var name) = name ++ " "
   pretty (Brack exp) = pretty exp
-  pretty (FuncCall name exps) = "CALL " ++ name ++ " "
+  pretty (App name exps) = "CALL " ++ name ++ " "
     ++ concatMap (\x -> pretty x ++ " ") exps
 
 instance Pretty Block where

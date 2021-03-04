@@ -9,10 +9,13 @@ data Stmt
   | If Expr Block
   | IfElse Expr Block Block
   | IfElseIf Expr Block Stmt
+  | StrLet String Expr
+  | StrFuncDef String [Argument] Block
   deriving (Show)
 
 data Argument
   = Arg String Type
+  | StrArg String
   deriving (Show)
 
 data BinOp
@@ -42,7 +45,7 @@ data Expr
   | Var String
   | Brack Expr
   | Boolean Bool
-  | FuncCall String [Expr]
+  | App String [Expr]
   deriving (Show)
 
 data Block

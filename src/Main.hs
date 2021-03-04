@@ -3,21 +3,21 @@ module Main where
 import Language.CoreErlang.Parser (parseModule)
 import System.Process (callCommand)
 
+import Language.Parser (parse)
+import Language.TypeChecker (verify)
 import Language.Compiler (stringToList)
-import Language.Parser (parseProgram)
 
 main :: IO ()
-main = parse
+main = generateCE
 
-test = do
+strToList = do
   print $ stringToList "hello"
 
-
-parse = do
+parseTestFile = do
   file <- readFile "src\\test.lyre"
-  print $ parseProgram file
+  print . verify $ parse file
 
-erlc = do
+generateCE = do
   callCommand "erlc +to_core -o src src\\test.erl "
   file <- readFile "src\\test.core"
 

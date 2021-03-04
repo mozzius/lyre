@@ -19,7 +19,7 @@ import Data.List
   bool          { TokenBoolean _ $$ }
   return        { TokenReturn _ }
   func          { TokenFunc _ }
-  funcName      { TokenFuncCall _ $$ }
+  funcName      { TokenApp _ $$ }
   ':'           { TokenColon _ }
   ','           { TokenComma _ }
   '!'           { TokenNot _ }
@@ -146,7 +146,7 @@ Factor :: { Expr }
   | bool                                         { Boolean ($1 == "true") }
   | stringLiteral                                { String (init . tail $ $1) }
   | '(' Expression ')'                           { Brack $2 }
-  | funcName OptExprList ')'                     { FuncCall (init $1) $2 }
+  | funcName OptExprList ')'                     { App (init $1) $2 }
 
 OptNL
   : OptNL nl                                     {}
@@ -163,7 +163,7 @@ parseError tokens = error
       ++ "\n" ++ concat (map (\t -> show t ++ "\n") tokens)
 parseError [] = error "No tokens found"
 
-parseProgram :: String -> Stmts
-parseProgram input = program $ scanTokens input
+parse :: String -> Stmts
+parse input = program $ scanTokens input
 
 }
