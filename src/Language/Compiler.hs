@@ -1,13 +1,13 @@
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeSynonymInstances #-}
-{-# LANGUAGE FlexibleInstances #-}
 
 module Language.Compiler where
 
-import Prelude hiding (exp)
-import Language.Syntax as Lyre
-import Language.CoreErlang.Syntax as Erl
 import Data.Char (ord)
+import Language.CoreErlang.Syntax as Erl
+import Language.Syntax as Lyre
+import Prelude hiding (exp)
 
 class Compiler source target where
   compile :: source -> target
@@ -34,50 +34,102 @@ erlangCall :: String -> [Erl.Exps] -> Erl.Exp
 erlangCall = moduleCall "erlang"
 
 constructList :: [Erl.Exps] -> Erl.Exp
-constructList []     = Erl.Lit Erl.LNil
-constructList [x   ] = Erl.List (Erl.L [x])
-constructList (x:xs) = Erl.List (Erl.LL [x] (exp $ constructList xs))
+constructList [] = Erl.Lit Erl.LNil
+constructList [x] = Erl.List (Erl.L [x])
+constructList (x : xs) = Erl.List (Erl.LL [x] (exp $ constructList xs))
 
 stringToList :: String -> Erl.Exp
-stringToList str = constructList $ map
-  (\x -> Erl.Exp (Erl.Constr (Erl.Lit (Erl.LInt (toInteger $ ord x)))))
-  str
+stringToList str =
+  constructList $
+    map
+      (\x -> Erl.Exp (Erl.Constr (Erl.Lit (Erl.LInt (toInteger $ ord x)))))
+      str
 
 instance Compiler Lyre.Stmts Erl.Exps where
-  compile stmts = Erl.Exps (Erl.Constr (
-    case stmts of
-      [] -> []
-      ((Lyre.StrLet name expr):rest) ->
-        [Erl.Constr (Erl.Let ([underscore name], (exp $ compile expr)) (compile rest))]
-      ((Lyre.StrFuncDef name args block):rest) ->
-        [Erl.Constr (Erl.Let ([underscore name], exp (Erl.Lambda (map compile args) (compile block))) (compile rest))]
-      ((Lyre.If expr block):rest) ->
-        [Erl.Constr (Erl.Case (Erl.Exps (Erl.Constr [])) [
-          (Erl.Constr (Erl.Alt (Erl.Pats [])
-                               (Erl.Guard (exp $ compile expr)
-                               (exps $ compile block))))])]
-      ((Lyre.IfElse expr block elseBlock):rest) ->
-        [Erl.Constr (Erl.Case (Erl.Exps (Erl.Constr [])) [
-          (Erl.Constr (Erl.Alt (Erl.Pats [])
-                               (Erl.Guard (exp $ compile expr)
-                               (exps $ compile block)),
-          (Erl.Constr (Erl.Alt (Erl.Pats [])
-                               (Erl.Guard (expAtom "true"))
-                               (exps $ compile elseBlock)))
-        ))])]
-      -- ((Lyre.IfElseIf expr block nextIf):rest) ->
-      --   [Erl.Constr (Erl.Case (Erl.Exps (Erl.Constr [])) [
-      --     (Erl.Constr (Erl.Alt (Erl.Pats [])
-      --                          (Erl.Guard (exp $ compile expr)
-      --                          (exps $ compile block)),
-      --     (Erl.Constr (Erl.Alt (Erl.Pats [])
-      --                          (Erl.Guard (expAtom "true"))
-      --                          (exps $ compile [nextIf])))
-      --   ))])]
-      ((Lyre.Return expr):_) -> [Erl.Constr (compile expr)]
-      ((Lyre.Let _ _ _):_) -> error "Let statement is still typed, please strip types before compilation"
-      ((Lyre.FuncDef _ _ _ _):_) -> error "FuncDef statement is still typed, please strip types before compilation"
-    ))
+  compile stmts =
+    Erl.Exps
+      ( Erl.Constr
+          ( case stmts of
+              [] -> []
+              ((Lyre.StrLet name expr) : rest) ->
+                [Erl.Constr (Erl.Let ([underscore name], exp $ compile expr) (compile rest))]
+              ((Lyre.StrFuncDef name args block) : rest) ->
+                [Erl.Constr (Erl.Let ([underscore name], exp (Erl.Lambda (map compile args) (compile block))) (compile rest))]
+              ((Lyre.If expr block) : rest) ->
+                [ Erl.Constr
+                    ( Erl.Case
+                        (Erl.Exps (Erl.Constr []))
+                        [ Erl.Constr
+                            ( Erl.Alt
+                                (Erl.Pats [])
+                                ( Erl.Guard
+                                    (exp $ compile expr)
+                                )
+                                (compile block)
+                            )
+                        ]
+                    )
+                ]
+              ((Lyre.IfElse expr block elseBlock) : rest) ->
+                [ Erl.Constr
+                    ( Erl.Case
+                        (Erl.Exps (Erl.Constr []))
+                        [ Erl.Constr
+                            ( Erl.Alt
+                                (Erl.Pats [])
+                                ( Erl.Guard
+                                    (exp $ compile expr)
+                                )
+                                (exps $ compile block)
+                            ),
+                          Erl.Constr
+                            ( Erl.Alt
+                                (Erl.Pats [])
+                                (Erl.Guard (expAtom "true"))
+                                (exps $ compile elseBlock)
+                            )
+                        ]
+                    )
+                ]
+              ((Lyre.IfElseIf expr block next) : rest) ->
+                [ Erl.Constr
+                    ( Erl.Case
+                        (Erl.Exps (Erl.Constr []))
+                        [ Erl.Constr
+                            ( Erl.Alt
+                                (Erl.Pats [])
+                                ( Erl.Guard
+                                    (exp $ compile expr)
+                                )
+                                (exps $ compile block)
+                            ),
+                          Erl.Constr
+                            ( Erl.Alt
+                                (Erl.Pats [])
+                                (Erl.Guard (expAtom "true"))
+                                (compile next)
+                            )
+                        ]
+                    )
+                ]
+              -- ((Lyre.IfElseIf expr block nextIf):rest) ->
+              --   [Erl.Constr (Erl.Case (Erl.Exps (Erl.Constr [])) [
+              --     (Erl.Constr (Erl.Alt (Erl.Pats [])
+              --                          (Erl.Guard (exp $ compile expr)
+              --                          (exps $ compile block)),
+              --     (Erl.Constr (Erl.Alt (Erl.Pats [])
+              --                          (Erl.Guard (expAtom "true"))
+              --                          (exps $ compile [nextIf])))
+              --   ))])]
+              ((Lyre.Return expr) : _) -> [Erl.Constr (compile expr)]
+              (Lyre.Let {} : _) -> error "Let statement is still typed, please strip types before compilation"
+              (Lyre.FuncDef {} : _) -> error "FuncDef statement is still typed, please strip types before compilation"
+          )
+      )
+
+
+instance Compiler Lyre.Stmts Erl.Exps where
+  compile (Lyre.If) =
 
 instance Compiler Lyre.Argument String where
   compile (StrArg name) = underscore name
@@ -102,7 +154,7 @@ instance Compiler Lyre.Expr Erl.Exp where
   compile (Lyre.Brack expr) = compile expr
   compile (Lyre.App name args) =
     let arity = toInteger . length $ args
-    in Erl.App (Erl.Exp (Erl.Constr (Erl.Fun (Erl.Function (Erl.Atom name, arity))))) (map (\x -> exp $ compile x) args)
+     in Erl.App (Erl.Exp (Erl.Constr (Erl.Fun (Erl.Function (Erl.Atom name, arity))))) (map (exp . compile) args)
   compile (Lyre.String literal) = stringToList literal
   compile (Lyre.Boolean boolean) = if boolean then atom "true" else atom "false"
 
@@ -177,58 +229,59 @@ instance Compiler Lyre.Block Erl.Exps where
 --     )
 --   )
 
--- iff = FunDef
---   (Constr (Function (Atom "main", 1)))
---   ( Constr
---     ( Lambda
---       ["_0"]
---       ( Exp
---         ( Constr
---           ( Case
---             (Exps (Constr []))
---             [ Constr
---               ( Alt
---                 (Pats [])
---                 ( Guard
---                   ( Exp
---                     ( Constr
---                       ( ModCall
---                         ( Exp (Constr (Lit (LAtom (Atom "erlang"))))
---                         , Exp (Constr (Lit (LAtom (Atom "=="))))
---                         )
---                         [Exp (Constr (Var "_0")), Exp (Constr (Lit (LInt 1)))]
---                       )
---                     )
---                   )
---                 )
---                 (Exp (Constr (Lit (LInt 1))))
---               )
---             , Constr
---               ( Alt
---                 (Pats [])
---                 ( Guard
---                   ( Exp
---                     ( Constr
---                       ( ModCall
---                         ( Exp (Constr (Lit (LAtom (Atom "erlang"))))
---                         , Exp (Constr (Lit (LAtom (Atom "=="))))
---                         )
---                         [Exp (Constr (Var "_0")), Exp (Constr (Lit (LInt 2)))]
---                       )
---                     )
---                   )
---                 )
---                 (Exp (Constr (Lit (LInt 2))))
---               )
---             , Constr
---               ( Alt (Pats [])
---                     (Guard (Exp (Constr (Lit (LAtom (Atom "true"))))))
---                     (Exp (Constr (Lit (LInt 0))))
---               )
---             ]
---           )
---         )
---       )
---     )
---   )
-
+iff =
+  FunDef
+    (Constr (Function (Atom "main", 1)))
+    ( Constr
+        ( Lambda
+            ["_0"]
+            ( Exp
+                ( Constr
+                    ( Case
+                        (Exps (Constr []))
+                        [ Constr
+                            ( Alt
+                                (Pats [])
+                                ( Guard
+                                    ( Exp
+                                        ( Constr
+                                            ( ModCall
+                                                ( Exp (Constr (Lit (LAtom (Atom "erlang")))),
+                                                  Exp (Constr (Lit (LAtom (Atom "=="))))
+                                                )
+                                                [Exp (Constr (Erl.Var "_0")), Exp (Constr (Lit (LInt 1)))]
+                                            )
+                                        )
+                                    )
+                                )
+                                (Exp (Constr (Lit (LInt 1))))
+                            ),
+                          Constr
+                            ( Alt
+                                (Pats [])
+                                ( Guard
+                                    ( Exp
+                                        ( Constr
+                                            ( ModCall
+                                                ( Exp (Constr (Lit (LAtom (Atom "erlang")))),
+                                                  Exp (Constr (Lit (LAtom (Atom "=="))))
+                                                )
+                                                [Exp (Constr (Erl.Var "_0")), Exp (Constr (Lit (LInt 2)))]
+                                            )
+                                        )
+                                    )
+                                )
+                                (Exp (Constr (Lit (LInt 2))))
+                            ),
+                          Constr
+                            ( Alt
+                                (Pats [])
+                                (Guard (Exp (Constr (Lit (LAtom (Atom "true"))))))
+                                (Exp (Constr (Lit (LInt 0))))
+                            )
+                        ]
+                    )
+                )
+            )
+        )
+    )

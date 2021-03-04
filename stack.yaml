@@ -44,8 +44,8 @@ packages:
 #
 # extra-deps: []
 extra-deps:
-  - github: amtal/CoreErlang
-    commit: 410cc94f9f8b15e652029ee483ddd42280d0b3de
+  - github: Mozzius/CoreErlang
+    commit: 641a7c7a4fb0a699adace589bcac366c02b8c564
 
 # Override default flag values for local packages and extra-deps
 # flags: {}

@@ -5,16 +5,16 @@
 
 packages:
 - completed:
-    size: 10028
-    url: https://github.com/amtal/CoreErlang/archive/410cc94f9f8b15e652029ee483ddd42280d0b3de.tar.gz
+    size: 10033
+    url: https://github.com/Mozzius/CoreErlang/archive/641a7c7a4fb0a699adace589bcac366c02b8c564.tar.gz
     name: CoreErlang
-    version: 0.0.4
-    sha256: f285c8b5051d112f190f747be964b184b64719cabcc874fa588126a5c6957190
+    version: 0.0.5
+    sha256: f835bd298950d3d67425d4e8939f9f9d9777369c0ba19667c78538432cc1560e
     pantry-tree:
       size: 455
-      sha256: 2575a47eccb7cdf0dff9725ed2d614acd614fe39051495976dc6e52a39e06929
+      sha256: 5beca3c2b0ff604e5894bb0eb720a2888e424094751d803e2624e86f1cfaeaf5
   original:
-    url: https://github.com/amtal/CoreErlang/archive/410cc94f9f8b15e652029ee483ddd42280d0b3de.tar.gz
+    url: https://github.com/Mozzius/CoreErlang/archive/641a7c7a4fb0a699adace589bcac366c02b8c564.tar.gz
 snapshots:
 - completed:
     size: 565266
