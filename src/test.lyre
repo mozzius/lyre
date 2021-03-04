@@ -2,14 +2,3 @@
 func hello() {
   return "hello world"
 }
-
-func main(num: int): string {
-  let compare: int = 122
-  if (num > compare) {
-    return "is greater than 122"
-  } else if (false) {
-    return "is less than 122"
-  } else {
-    return "is equal to 122"
-  }
-}

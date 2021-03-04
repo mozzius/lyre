@@ -1,15 +1,35 @@
 module 'test' ['main'/1,
 	       'module_info'/0,
-	       'module_info'/1]
+	       'module_info'/1,
+	       'tow'/3]
     attributes [%% Line 1
 		'file' =
 		    %% Line 1
 		    [{[115|[114|[99|[47|[116|[101|[115|[116|[46|[101|[114|[108]]]]]]]]]]]],1}]]
+'tow'/3 =
+    %% Line 5
+    fun (_0,_1,_2) ->
+	[_0|[_1|[_2|[]]]]
 'main'/1 =
-    %% Line 6
+    %% Line 7
     fun (_0) ->
-	call 'erlang':'not'
-	    (_0)
+	%% Line 8
+	case <> of
+	  <>
+	      when call 'erlang':'=='
+		    (_0,
+		     1) ->
+	      1
+	  %% Line 9
+	  <>
+	      when call 'erlang':'=='
+		    (_0,
+		     2) ->
+	      2
+	  %% Line 10
+	  <> when 'true' ->
+	      0
+	end
 'module_info'/0 =
     fun () ->
 	call 'erlang':'get_module_info'

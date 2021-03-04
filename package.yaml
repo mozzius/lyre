@@ -16,7 +16,7 @@ extra-source-files:
 # category:            Web
 
 dependencies:
-  - base >=4.7 && <=4.11
+  - base >=4.14
   - array
   - text
   - filepath

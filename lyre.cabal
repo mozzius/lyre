@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: ba5e52f4b51490c89c3b8bfb74770388114b7a364bd5f5c31d5c6ad2c8912e26
+-- hash: cd521ac6bbafe76b7fce6576eae02e53bacff78fc074302e196a4ffc004bf6bc
 
 name:           lyre
 version:        0.1.0
@@ -42,7 +42,7 @@ library
   build-depends:
       CoreErlang ==0.0.4
     , array
-    , base >=4.7 && <=4.11
+    , base >=4.14
     , filepath
     , process
     , text
@@ -61,7 +61,7 @@ executable lyre-exe
   build-depends:
       CoreErlang ==0.0.4
     , array
-    , base >=4.7 && <=4.11
+    , base >=4.14
     , filepath
     , lyre
     , process

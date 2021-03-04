@@ -17,8 +17,8 @@ packages:
     url: https://github.com/amtal/CoreErlang/archive/410cc94f9f8b15e652029ee483ddd42280d0b3de.tar.gz
 snapshots:
 - completed:
-    size: 569315
-    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/10/9.yaml
-    sha256: c85a3b35a7c2fa3771728a6f19e363c62ff5619afc2670f87450c19e6770c37f
+    size: 565266
+    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/17/5.yaml
+    sha256: 78e8ebabf11406261abbc95b44f240acf71802630b368888f6d758de7fc3a2f7
   original:
-    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/10/9.yaml
+    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/17/5.yaml
