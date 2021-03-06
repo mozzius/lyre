@@ -20,8 +20,9 @@ dependencies:
   - array
   - text
   - filepath
-  - CoreErlang ==0.0.4
+  - CoreErlang ==0.0.5
   - process
+  - directory
 
 library:
   source-dirs: src

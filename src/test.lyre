@@ -1,4 +1,4 @@
 
-func hello() {
-  return "hello world"
+func main(X:int) {
+  return X+3
 }

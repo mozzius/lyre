@@ -13,23 +13,23 @@ module 'test' ['main'/1,
 'main'/1 =
     %% Line 7
     fun (_0) ->
-	%% Line 8
-	case <> of
-	  <>
-	      when call 'erlang':'=='
-		    (_0,
-		     1) ->
-	      1
-	  %% Line 9
-	  <>
-	      when call 'erlang':'=='
-		    (_0,
-		     2) ->
-	      2
-	  %% Line 10
-	  <> when 'true' ->
-	      0
-	end
+	let <Y> =
+	    call %% Line 8
+		 'erlang':%% Line 8
+			  '+'
+		(_0, %% Line 8
+		     1)
+	in  let <Z> =
+		call %% Line 8
+		     'erlang':%% Line 8
+			      'spawn'
+		    (%% Line 8
+		     'test', %% Line 8
+			     'tow', %% Line 8
+				    [Y|[2|[3]]])
+	    in  %% Line 8
+		call 'erlang':'!'
+		    (Z, [104|[105]])
 'module_info'/0 =
     fun () ->
 	call 'erlang':'get_module_info'

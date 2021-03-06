@@ -1,0 +1,5 @@
+module 'test' ['main'/1]
+    attributes ['file' = [{[116|[101|[115|[116]]]]}]]
+'main'/1 =
+    fun(_X) -> <call 'erlang':'+' (_X, 3)>
+end
