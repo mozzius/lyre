@@ -1,4 +1,9 @@
 
-func main(X:int) {
-  return X+3
+func main(x: int): int {
+  let newfunc = plusone
+  return newfunc(1)
+}
+
+func plusone(num: int): int {
+  return num + 1
 }

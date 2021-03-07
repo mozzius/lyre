@@ -29,14 +29,8 @@ getFuncs =
 compileModule :: String -> Lyre.Stmts -> Erl.Module
 compileModule name program = let funcs = getFuncs program in Erl.Module (Erl.Atom name) (map (\(Func _ name arity) -> Erl.Function (Erl.Atom name, toInteger arity)) funcs) [(Erl.Atom "file", constructFileName name)] (map compile program)
 
-class Compiler source target where
-  compile :: source -> target
-
 underscore :: String -> String
 underscore str = "_" ++ str
-
-exps :: [Erl.Ann Erl.Exp] -> Erl.Exps
-exps x = Erl.Exps (Erl.Constr x)
 
 exp :: Erl.Exp -> Erl.Exps
 exp x = Erl.Exp (Erl.Constr x)
@@ -81,28 +75,29 @@ constructFileName str =
         ]
     )
 
-instance Compiler Lyre.Stmts Erl.Exps where
-  compile stmts = exps $ compile stmts
+class Compiler source target where
+  compile :: source -> target
 
-instance Compiler [Lyre.Stmt] [Erl.Ann Erl.Exp] where
-  compile [] = [Erl.Constr (atom "ok")]
+-- For base level function declarations
+instance Compiler Lyre.Stmt Erl.FunDef where
+  compile (Lyre.StrFuncDef name args block) = Erl.FunDef (Erl.Constr (Erl.Function (Erl.Atom name, toInteger $ length args))) (Erl.Constr (Erl.Lambda (map (\(Lyre.StrArg a) -> underscore a) args) (compile block)))
+  compile _ = error "Only (type-stripped) FuncDefs are allowed at the base level of a program"
+
+instance Compiler Lyre.Stmts Erl.Exp where
+  compile [] = atom "ok"
   compile ((Lyre.StrLet name expr) : rest) =
-    [Erl.Constr (Erl.Let ([underscore name], exp $ compile expr) (compile rest))]
+    Erl.Let ([underscore name], exp $ compile expr) (exp $ compile rest)
   compile ((Lyre.StrFuncDef name args block) : rest) =
-    [Erl.Constr (Erl.Let ([underscore name], exp (Erl.Lambda (map compile args) (compile block))) (compile rest))]
+    Erl.Let ([underscore name], exp (Erl.Lambda (map compile args) (compile block))) (exp $ compile rest)
   compile ((Lyre.If expr block) : rest) =
-    Erl.Constr (compile (Lyre.If expr block)) : compile rest
+    Erl.Seq (exp $ compile (Lyre.If expr block)) (exp $ compile rest)
   compile ((Lyre.IfElse expr block elseBlock) : rest) =
-    Erl.Constr (compile (Lyre.IfElse expr block elseBlock)) : compile rest
+    Erl.Seq (exp $ compile (Lyre.IfElse expr block elseBlock)) (exp $ compile rest)
   compile ((Lyre.IfElseIf expr block next) : rest) =
-    Erl.Constr (compile (Lyre.IfElseIf expr block next)) : compile rest
-  compile ((Lyre.Return expr) : _) = [Erl.Constr (compile expr)]
+    Erl.Seq (exp $ compile (Lyre.IfElseIf expr block next)) (exp $ compile rest)
+  compile ((Lyre.Return expr) : _) = compile expr
   compile (Lyre.Let {} : _) = error "Let statement is still typed, please strip types before compilation"
   compile (Lyre.FuncDef {} : _) = error "FuncDef statement is still typed, please strip types before compilation"
-
-instance Compiler Lyre.Stmt Erl.FunDef where
-  compile (Lyre.StrFuncDef name args expr) = Erl.FunDef (Erl.Constr (Erl.Function (Erl.Atom name, toInteger $ length args))) (Erl.Constr (Erl.Lambda (map (\(Lyre.StrArg a) -> underscore a) args) (compile expr)))
-  compile _ = error "Only (type-stripped) FuncDefs are allowed at the base level of a program"
 
 instance Compiler Lyre.Stmt Erl.Exp where
   compile (Lyre.If expr block) =
@@ -150,7 +145,7 @@ instance Compiler Lyre.Stmt Erl.Exp where
           ( Erl.Alt
               (Erl.Pats [])
               (Erl.Guard (expAtom "true"))
-              (exps [Erl.Constr (compile next)])
+              (exp $ compile next)
           )
       ]
 
@@ -182,131 +177,5 @@ instance Compiler Lyre.Expr Erl.Exp where
   compile (Lyre.Boolean boolean) = if boolean then atom "true" else atom "false"
 
 instance Compiler Lyre.Block Erl.Exps where
-  compile (Lyre.Curly stmts) = compile stmts
+  compile (Lyre.Curly stmts) = exp $ compile stmts
   compile (Lyre.Expr expr) = exp $ compile expr
-
--- fundef = FunDef
---   (Constr (Function (Atom "main", 0)))
---   ( Constr
---     ( Lambda
---       []
---       ( Exp
---         ( Constr
---           ( Let
---             ( ["PID"]
---             , Exp
---               ( Constr
---                 ( ModCall
---                   ( Exp (Constr (Lit (LAtom (Atom "erlang"))))
---                   , Exp (Constr (Lit (LAtom (Atom "spawn"))))
---                   )
---                   [ Exp (Constr (Lit (LAtom (Atom "test"))))
---                   , Exp (Constr (Lit (LAtom (Atom "main"))))
---                   , Exp (Constr (Lit LNil))
---                   ]
---                 )
---               )
---             )
---             ( Exp
---               ( Constr
---                 ( ModCall
---                   ( Exp (Constr (Lit (LAtom (Atom "erlang"))))
---                   , Exp (Constr (Lit (LAtom (Atom "!"))))
---                   )
---                   [ Exp (Constr (Var "PID"))
---                   , Exp (Constr (Lit (LAtom (Atom "hello"))))
---                   ]
---                 )
---               )
---             )
---           )
---         )
---       )
---     )
---   )
-
--- funcall = FunDef
---   (Constr (Function (Atom "main", 0)))
---   ( Constr
---     ( Lambda
---       []
---       (Exp (Constr (App (Exp (Constr (Fun (Function (Atom "main", 0))))) [])))
---     )
---   )
-
--- plusone = FunDef
---   (Constr (Function (Atom "main", 1)))
---   ( Constr
---     ( Lambda
---       ["_0"]
---       ( Exp
---         ( Constr
---           ( ModCall
---             ( Exp (Constr (Lit (LAtom (Atom "erlang"))))
---             , Exp (Constr (Lit (LAtom (Atom "+"))))
---             )
---             [Exp (Constr (Var "_0")), Exp (Constr (Lit (LInt 1)))]
---           )
---         )
---       )
---     )
---   )
-
--- iff =
---   FunDef
---     (Constr (Function (Atom "main", 1)))
---     ( Constr
---         ( Lambda
---             ["_0"]
---             ( Exp
---                 ( Constr
---                     ( Case
---                         (Exps (Constr []))
---                         [ Constr
---                             ( Alt
---                                 (Pats [])
---                                 ( Guard
---                                     ( Exp
---                                         ( Constr
---                                             ( ModCall
---                                                 ( Exp (Constr (Lit (LAtom (Atom "erlang")))),
---                                                   Exp (Constr (Lit (LAtom (Atom "=="))))
---                                                 )
---                                                 [Exp (Constr (Erl.Var "_0")), Exp (Constr (Lit (LInt 1)))]
---                                             )
---                                         )
---                                     )
---                                 )
---                                 (Exp (Constr (Lit (LInt 1))))
---                             ),
---                           Constr
---                             ( Alt
---                                 (Pats [])
---                                 ( Guard
---                                     ( Exp
---                                         ( Constr
---                                             ( ModCall
---                                                 ( Exp (Constr (Lit (LAtom (Atom "erlang")))),
---                                                   Exp (Constr (Lit (LAtom (Atom "=="))))
---                                                 )
---                                                 [Exp (Constr (Erl.Var "_0")), Exp (Constr (Lit (LInt 2)))]
---                                             )
---                                         )
---                                     )
---                                 )
---                                 (Exp (Constr (Lit (LInt 2))))
---                             ),
---                           Constr
---                             ( Alt
---                                 (Pats [])
---                                 (Guard (Exp (Constr (Lit (LAtom (Atom "true"))))))
---                                 (Exp (Constr (Lit (LInt 0))))
---                             )
---                         ]
---                     )
---                 )
---             )
---         )
---     )
-
--- full = Right (Constr (Module (Atom "test") [Erl.Function (Atom "main", 1), Erl.Function (Atom "module_info", 0), Erl.Function (Atom "module_info", 1), Erl.Function (Atom "tow", 3)] [(Atom "file", CList (L [CTuple [CList (LL [CLit (LInt 115)] (CList (LL [CLit (LInt 114)] (CList (LL [CLit (LInt 99)] (CList (LL [CLit (LInt 47)] (CList (LL [CLit (LInt 116)] (CList (LL [CLit (LInt 101)] (CList (LL [CLit (LInt 115)] (CList (LL [CLit (LInt 116)] (CList (LL [CLit (LInt 46)] (CList (LL [CLit (LInt 101)] (CList (LL [CLit (LInt 114)] (CList (L [CLit (LInt 108)]))))))))))))))))))))))), CLit (LInt 1)]]))] [FunDef (Constr (Erl.Function (Atom "tow", 3))) (Constr (Lambda ["_0", "_1", "_2"] (Exp (Constr (List (LL [Exp (Constr (Var "_0"))] (Exp (Constr (List (LL [Exp (Constr (Var "_1"))] (Exp (Constr (List (LL [Exp (Constr (Var "_2"))] (Exp (Constr (Lit LNil))))))))))))))))), FunDef (Constr (Erl.Function (Atom "main", 1))) (Constr (Lambda ["_0"] (Exp (Constr (Case (Exps (Constr [])) [Constr (Alt (Pats []) (Guard (Exp (Constr (ModCall (Exp (Constr (Lit (LAtom (Atom "erlang")))), Exp (Constr (Lit (LAtom (Atom "=="))))) [Exp (Constr (Var "_0")), Exp (Constr (Lit (LInt 1)))])))) (Exp (Constr (Lit (LInt 1))))), Constr (Alt (Pats []) (Guard (Exp (Constr (ModCall (Exp (Constr (Lit (LAtom (Atom "erlang")))), Exp (Constr (Lit (LAtom (Atom "=="))))) [Exp (Constr (Var "_0")), Exp (Constr (Lit (LInt 2)))])))) (Exp (Constr (Lit (LInt 2))))), Constr (Alt (Pats []) (Guard (Exp (Constr (Lit (LAtom (Atom "true")))))) (Exp (Constr (Lit (LInt 0)))))]))))), FunDef (Constr (Erl.Function (Atom "module_info", 0))) (Constr (Lambda [] (Exp (Constr (ModCall (Exp (Constr (Lit (LAtom (Atom "erlang")))), Exp (Constr (Lit (LAtom (Atom "get_module_info"))))) [Exp (Constr (Lit (LAtom (Atom "test"))))]))))), FunDef (Constr (Erl.Function (Atom "module_info", 1))) (Constr (Lambda ["_0"] (Exp (Constr (ModCall (Exp (Constr (Lit (LAtom (Atom "erlang")))), Exp (Constr (Lit (LAtom (Atom "get_module_info"))))) [Exp (Constr (Lit (LAtom (Atom "test")))), Exp (Constr (Var "_0"))])))))]))

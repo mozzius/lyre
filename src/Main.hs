@@ -1,17 +1,16 @@
 module Main where
 
-import Language.CoreErlang.Syntax (Module)
-import Language.CoreErlang.Pretty (prettyPrint)
+import Language.Compiler (compileModule)
 import Language.CoreErlang.Parser (parseModule)
-import System.Process (callCommand)
--- import System.Environment as Env
--- import System.Exit as Exit
-import System.Directory (createDirectoryIfMissing)
-import System.FilePath (takeDirectory)
-
+import Language.CoreErlang.Pretty (prettyPrint)
+import Language.CoreErlang.Syntax
 import Language.Parser (parse)
 import Language.TypeChecker (verify)
-import Language.Compiler (compileModule)
+import System.Directory (createDirectoryIfMissing)
+import System.Environment as Env (getArgs)
+import System.Exit (exitSuccess)
+import System.FilePath (takeBaseName, takeDirectory, (-<.>), (<.>), (</>))
+import System.Process (callCommand)
 
 -- https://stackoverflow.com/a/58685979
 createAndWriteFile :: FilePath -> String -> IO ()
@@ -20,18 +19,44 @@ createAndWriteFile path content = do
   writeFile path content
 
 main :: IO ()
-main = do
-  file <- readFile "src\\test.lyre"
-  let ast = (compileModule "test" . verify $ parse file) :: Module
-  createAndWriteFile "build\\test.core" (prettyPrint ast)
+main = Env.getArgs >>= parseArgs
+
+parseArgs :: [String] -> IO ()
+parseArgs ["-h"] = usage >> exitSuccess
+parseArgs ["-v"] = version >> exitSuccess
+parseArgs ["-e", path] = erl path >> exitSuccess
+parseArgs [path] = do
+  let name = takeBaseName path
+  file <- readFile path
+  let ast = (compileModule name . verify $ parse file) :: Module
+  print ast
+  createAndWriteFile ("build" </> name <.> "core") (prettyPrint ast)
   -- compile to BEAM
-  callCommand "erlc build\\test.core"
+  callCommand ("erlc build" </> name <.> "core")
+  exitSuccess
 
-  -- callCommand "erlc +to_core -o src src\\test.erl"
-  -- file <- readFile "src\\test.core"
+usage :: IO ()
+usage =
+  putStrLn
+    ( "Usage: lyre path   Compile Lyre code to BEAM\n"
+        ++ "       lyre -v     Get Lyre version\n"
+        ++ "       lyre -h     View available commands"
+    )
 
-  -- print "===================="
-  -- print file
-  -- print "==== CoreErlang ===="
-  -- print $ parseModule file
-  -- print "===================="
+version :: IO ()
+version = putStrLn "Lyre v0.0.1"
+
+-- run
+-- callCommand "erl -noshell -s test main -s init stop"
+
+erl :: FilePath -> IO ()
+erl path = do
+  let name = takeBaseName path
+  callCommand ("erlc +to_core " ++ path)
+  file <- readFile (name -<.> "core")
+
+  putStrLn "===================="
+  putStrLn file
+  putStrLn "==== CoreErlang ===="
+  print $ parseModule file
+  putStrLn "===================="
