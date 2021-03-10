@@ -3,5 +3,6 @@ func main(x: int): int {
   func plusone(num: int): int {
     return num + 1
   }
-  return newfunc(1)
+  
+  return plusone(1)
 }

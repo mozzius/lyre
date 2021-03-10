@@ -24,7 +24,7 @@ getFuncs =
     )
 
 compileModule :: String -> Lyre.Stmts -> Erl.Module
-compileModule name program = let funcs = getFuncs program in Erl.Module (Erl.Atom name) (map (\(Func _ name arity) -> Erl.Function (Erl.Atom name, toInteger arity)) funcs) [(Erl.Atom "file", constructFileName name)] (map compile program)
+compileModule name program = let funcs = getFuncs program in Erl.Module (Erl.Atom name) (map (\(Func _ name arity) -> Erl.Function (Erl.Atom name, toInteger arity)) funcs) [(Erl.Atom "file", constructFileName name)] (map (`compile` []) program)
 
 underscore :: String -> String
 underscore str = "_" ++ str
@@ -87,107 +87,116 @@ addFunc name env = case lookup name env of
   Just name -> error "Name already in use"
   Nothing -> (name, (name, name) : env)
 
+addArgs :: [Lyre.Argument] -> [(String, String)] -> ([String], [(String, String)])
+addArgs [] env = ([], env)
+addArgs ((Lyre.StrArg arg) : rest) env0 = let (name, env1) = addVar arg env0 in let (names, env2) = addArgs rest env1 in (name : names, env2)
+
 class Compiler source target where
-  compile :: source -> env -> target
+  compile :: source -> [(String, String)] -> target
 
 -- For base level function declarations
 instance Compiler Lyre.Stmt Erl.FunDef where
-  compile (Lyre.StrFuncDef name args block) = Erl.FunDef (Erl.Constr (Erl.Function (Erl.Atom name, toInteger $ length args))) (Erl.Constr (Erl.Lambda (map (\(Lyre.StrArg a) -> underscore a) args) (compile block)))
-  compile _ = error "Only (type-stripped) FuncDefs are allowed at the base level of a program"
+  compile (Lyre.StrFuncDef name args0 block) env0 =
+    let (name, env1) = addFunc name env0
+     in let (args1, env2) = addArgs args0 env1
+         in Erl.FunDef (Erl.Constr (Erl.Function (Erl.Atom name, toInteger $ length args0))) (Erl.Constr (Erl.Lambda args1 (compile block env2)))
+  compile _ _ = error "Only (type-stripped) FuncDefs are allowed at the base level of a program"
 
 instance Compiler Lyre.Stmts Erl.Exp where
   compile [] _ = atom "ok"
   compile ((Lyre.StrLet name expr) : rest) env =
-    Erl.Let ([lookup name env], exp $ compile expr env) (exp $ compile rest env)
+    let (name, newEnv) = addVar name env
+     in Erl.Let ([name], exp $ compile expr newEnv) (exp $ compile rest newEnv)
   compile ((Lyre.StrFuncDef name args block) : rest) env =
-    Erl.Let ([lookup name env], exp (Erl.Lambda (map compile args env) (compile block env))) (exp $ compile rest env)
+    let (name, newEnv) = addVar name env
+     in Erl.Let ([name], exp (Erl.Lambda (map (`compile` newEnv) args) (compile block newEnv))) (exp $ compile rest newEnv)
   compile ((Lyre.If expr block) : rest) env =
-    Erl.Seq (exp $ compile (Lyre.If expr block)) (exp $ compile rest env)
+    Erl.Seq (exp $ compile (Lyre.If expr block) env) (exp $ compile rest env)
   compile ((Lyre.IfElse expr block elseBlock) : rest) env =
     Erl.Seq (exp $ compile (Lyre.IfElse expr block elseBlock) env) (exp $ compile rest env)
   compile ((Lyre.IfElseIf expr block next) : rest) env =
-    Erl.Seq (exp $ compile (Lyre.IfElseIf expr block next)) (exp $ compile rest env)
+    Erl.Seq (exp $ compile (Lyre.IfElseIf expr block next) env) (exp $ compile rest env)
   compile ((Lyre.Return expr) : _) env = compile expr env
   compile (Lyre.Let {} : _) env = error "Let statement is still typed, please strip types before compilation"
   compile (Lyre.FuncDef {} : _) env = error "FuncDef statement is still typed, please strip types before compilation"
 
 instance Compiler Lyre.Stmt Erl.Exp where
-  compile (Lyre.If expr block) =
+  compile (Lyre.If expr block) env =
     Erl.Case
       (Erl.Exps (Erl.Constr []))
       [ Erl.Constr
           ( Erl.Alt
               (Erl.Pats [])
               ( Erl.Guard
-                  (exp $ compile expr)
+                  (exp $ compile expr env)
               )
-              (compile block)
+              (compile block env)
           )
       ]
-  compile (Lyre.IfElse expr block elseBlock) =
+  compile (Lyre.IfElse expr block elseBlock) env =
     Erl.Case
       (Erl.Exps (Erl.Constr []))
       [ Erl.Constr
           ( Erl.Alt
               (Erl.Pats [])
               ( Erl.Guard
-                  (exp $ compile expr)
+                  (exp $ compile expr env)
               )
-              (compile block)
+              (compile block env)
           ),
         Erl.Constr
           ( Erl.Alt
               (Erl.Pats [])
               (Erl.Guard (expAtom "true"))
-              (compile elseBlock)
+              (compile elseBlock env)
           )
       ]
-  compile (Lyre.IfElseIf expr block next) =
+  compile (Lyre.IfElseIf expr block next) env =
     Erl.Case
       (Erl.Exps (Erl.Constr []))
       [ Erl.Constr
           ( Erl.Alt
               (Erl.Pats [])
               ( Erl.Guard
-                  (exp $ compile expr)
+                  (exp $ compile expr env)
               )
-              (compile block)
+              (compile block env)
           ),
         Erl.Constr
           ( Erl.Alt
               (Erl.Pats [])
               (Erl.Guard (expAtom "true"))
-              (exp $ compile next)
+              (exp $ compile next env)
           )
       ]
 
 instance Compiler Lyre.Argument String where
-  compile (Lyre.StrArg name) = underscore name
-  compile (Lyre.Arg _ _) = error "Arguements are still typed, please strip types before compilation"
+  compile (Lyre.StrArg name) env = transformName name env
+  compile (Lyre.Arg _ _) _ = error "Arguements are still typed, please strip types before compilation"
 
 instance Compiler Lyre.BinOp String where
-  compile Lyre.Or = "or"
-  compile Lyre.And = "and"
-  compile Lyre.Plus = "+"
-  compile Lyre.Minus = "-"
-  compile Lyre.Div = "/"
-  compile Lyre.Times = "*"
+  compile Lyre.Or _ = "or"
+  compile Lyre.And _ = "and"
+  compile Lyre.Plus _ = "+"
+  compile Lyre.Minus _ = "-"
+  compile Lyre.Div _ = "/"
+  compile Lyre.Times _ = "*"
 
 instance Compiler Lyre.UnaOp String where
-  compile Lyre.Inv = "not"
+  compile Lyre.Inv _ = "not"
 
 instance Compiler Lyre.Expr Erl.Exp where
-  compile (Lyre.BinOp operator expr1 expr2) = erlangCall (compile operator) [exp $ compile expr1, exp $ compile expr2]
-  compile (Lyre.UnaOp operator expr) = erlangCall (compile operator) [exp $ compile expr]
-  compile (Lyre.Int integer) = Erl.Lit (Erl.LInt (toInteger integer))
-  compile (Lyre.Var name) = Erl.Var (underscore name)
-  compile (Lyre.Brack expr) = compile expr
-  compile (Lyre.App name args) =
+  compile (Lyre.BinOp operator expr1 expr2) env = erlangCall (compile operator env) [exp $ compile expr1 env, exp $ compile expr2 env]
+  compile (Lyre.UnaOp operator expr) env = erlangCall (compile operator env) [exp $ compile expr env]
+  compile (Lyre.Int integer) env = Erl.Lit (Erl.LInt (toInteger integer))
+  compile (Lyre.Var name) env = Erl.Var (transformName name env)
+  compile (Lyre.Brack expr) env = compile expr env
+  compile (Lyre.App name args) env =
     let arity = toInteger . length $ args
-     in Erl.App (Erl.Exp (Erl.Constr (Erl.Fun (Erl.Function (Erl.Atom name, arity))))) (map (exp . compile) args)
-  compile (Lyre.String literal) = stringToList literal
-  compile (Lyre.Boolean boolean) = if boolean then atom "true" else atom "false"
+     in Erl.App (Erl.Exp (Erl.Constr (Erl.Fun (Erl.Function (Erl.Atom name, arity))))) (map (\x -> exp $ compile x env) args)
+  compile (Lyre.String literal) env = stringToList literal
+  compile (Lyre.Boolean boolean) env = if boolean then atom "true" else atom "false"
 
 instance Compiler Lyre.Block Erl.Exps where
-  compile (Lyre.Curly stmts) = exp $ compile stmts
-  compile (Lyre.Expr expr) = exp $ compile expr
+  compile (Lyre.Curly stmts) env = exp $ compile stmts env
+  compile (Lyre.Expr expr) env = exp $ compile expr env
