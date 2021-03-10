@@ -1,9 +1,7 @@
 
 func main(x: int): int {
-  let newfunc = plusone
+  func plusone(num: int): int {
+    return num + 1
+  }
   return newfunc(1)
-}
-
-func plusone(num: int): int {
-  return num + 1
 }

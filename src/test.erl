@@ -2,5 +2,4 @@
 
 -export([main/1]).
 
-main(X) ->
-    case X of X -> io:printf("%s", [X]) end, X + 3.
+main(X) -> Y = fun (P) -> P + 1 end, Y(X).

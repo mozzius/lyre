@@ -10,9 +10,6 @@ import qualified Language.CoreErlang.Syntax as Erl
 import qualified Language.Syntax as Lyre
 import Prelude hiding (exp)
 
-seq :: Erl.Exp -> Erl.Exp -> Erl.Exp
-seq x y = x
-
 data Func = Func Lyre.Stmt String Int
 
 getFunc :: Lyre.Stmt -> Func
@@ -75,8 +72,23 @@ constructFileName str =
         ]
     )
 
+transformName :: String -> [(String, String)] -> String
+transformName name env = case lookup name env of
+  Just name -> name
+  Nothing -> error "Variable is not declared"
+
+addVar :: String -> [(String, String)] -> (String, [(String, String)])
+addVar name env = case lookup name env of
+  Just name -> error "Name already in use"
+  Nothing -> (name, (name, underscore name) : env)
+
+addFunc :: String -> [(String, String)] -> (String, [(String, String)])
+addFunc name env = case lookup name env of
+  Just name -> error "Name already in use"
+  Nothing -> (name, (name, name) : env)
+
 class Compiler source target where
-  compile :: source -> target
+  compile :: source -> env -> target
 
 -- For base level function declarations
 instance Compiler Lyre.Stmt Erl.FunDef where
@@ -84,20 +96,20 @@ instance Compiler Lyre.Stmt Erl.FunDef where
   compile _ = error "Only (type-stripped) FuncDefs are allowed at the base level of a program"
 
 instance Compiler Lyre.Stmts Erl.Exp where
-  compile [] = atom "ok"
-  compile ((Lyre.StrLet name expr) : rest) =
-    Erl.Let ([underscore name], exp $ compile expr) (exp $ compile rest)
-  compile ((Lyre.StrFuncDef name args block) : rest) =
-    Erl.Let ([underscore name], exp (Erl.Lambda (map compile args) (compile block))) (exp $ compile rest)
-  compile ((Lyre.If expr block) : rest) =
-    Erl.Seq (exp $ compile (Lyre.If expr block)) (exp $ compile rest)
-  compile ((Lyre.IfElse expr block elseBlock) : rest) =
-    Erl.Seq (exp $ compile (Lyre.IfElse expr block elseBlock)) (exp $ compile rest)
-  compile ((Lyre.IfElseIf expr block next) : rest) =
-    Erl.Seq (exp $ compile (Lyre.IfElseIf expr block next)) (exp $ compile rest)
-  compile ((Lyre.Return expr) : _) = compile expr
-  compile (Lyre.Let {} : _) = error "Let statement is still typed, please strip types before compilation"
-  compile (Lyre.FuncDef {} : _) = error "FuncDef statement is still typed, please strip types before compilation"
+  compile [] _ = atom "ok"
+  compile ((Lyre.StrLet name expr) : rest) env =
+    Erl.Let ([lookup name env], exp $ compile expr env) (exp $ compile rest env)
+  compile ((Lyre.StrFuncDef name args block) : rest) env =
+    Erl.Let ([lookup name env], exp (Erl.Lambda (map compile args env) (compile block env))) (exp $ compile rest env)
+  compile ((Lyre.If expr block) : rest) env =
+    Erl.Seq (exp $ compile (Lyre.If expr block)) (exp $ compile rest env)
+  compile ((Lyre.IfElse expr block elseBlock) : rest) env =
+    Erl.Seq (exp $ compile (Lyre.IfElse expr block elseBlock) env) (exp $ compile rest env)
+  compile ((Lyre.IfElseIf expr block next) : rest) env =
+    Erl.Seq (exp $ compile (Lyre.IfElseIf expr block next)) (exp $ compile rest env)
+  compile ((Lyre.Return expr) : _) env = compile expr env
+  compile (Lyre.Let {} : _) env = error "Let statement is still typed, please strip types before compilation"
+  compile (Lyre.FuncDef {} : _) env = error "FuncDef statement is still typed, please strip types before compilation"
 
 instance Compiler Lyre.Stmt Erl.Exp where
   compile (Lyre.If expr block) =
