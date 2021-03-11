@@ -1,8 +1,12 @@
 
+func plusone(num: int): int {
+  return num + 1
+}
+
 func main(x: int): int {
-  func plusone(num: int): int {
-    return num + 1
+  func plustwo(num: int): int {
+    return num + 2
   }
-  
-  return plusone(1)
+
+  return plusone(plustwo(x))
 }
