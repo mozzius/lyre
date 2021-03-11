@@ -3,7 +3,7 @@ module Main where
 import Language.Compiler (compileModule)
 import Language.CoreErlang.Parser (parseModule)
 import Language.CoreErlang.Pretty (prettyPrint)
-import Language.CoreErlang.Syntax
+import Language.CoreErlang.Syntax (Module)
 import Language.Parser (parse)
 import Language.TypeChecker (verify)
 import System.Directory (createDirectoryIfMissing)

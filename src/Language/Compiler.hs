@@ -81,15 +81,8 @@ constructFileName str =
         ]
     )
 
-transformName :: String -> ([(String, Int)], [(String, String)]) -> String
+transformName :: String -> ([(String, Int)], [(String, String)]) -> Either (Erl.Exp, Int) Erl.Exp
 transformName name (funcs, vars) = case lookup name funcs of
-  Just _ -> name
-  Nothing -> case lookup name vars of
-    Just newName -> newName
-    Nothing -> error ("Variable \"" ++ name ++ "\" not found")
-
-transformFuncName :: String -> ([(String, Int)], [(String, String)]) -> Either (Erl.Exp, Int) Erl.Exp
-transformFuncName name (funcs, vars) = case lookup name funcs of
   Just arity -> Left (Erl.Fun (Erl.Function (Erl.Atom name, toInteger arity)), arity)
   Nothing -> case lookup name vars of
     Just newName -> Right (Erl.Var newName)
@@ -192,10 +185,6 @@ instance Compiler Lyre.Stmt Erl.Exp where
       ]
   compile _ _ = error "Not sure how you ended up here, this is for if statements"
 
-instance Compiler Lyre.Argument String where
-  compile (Lyre.StrArg name) env = transformName name env
-  compile (Lyre.Arg _ _) _ = error "Arguements are still typed, please strip types before compilation"
-
 instance Compiler Lyre.BinOp String where
   compile Lyre.Or _ = "or"
   compile Lyre.And _ = "and"
@@ -223,13 +212,16 @@ instance Compiler Lyre.Expr Erl.Exp where
       (compile operator env)
       [exp $ compile expr env]
   compile (Lyre.Int integer) _ = Erl.Lit (Erl.LInt (toInteger integer))
-  compile (Lyre.Var name) env = Erl.Var (transformName name env)
+  compile (Lyre.Var name) env =
+    case transformName name env of
+      Left (func, _) -> func
+      Right var -> var
   compile (Lyre.Brack expr) env = compile expr env
   compile (Lyre.App name args) env =
     let argLen = length args
      in Erl.App
           ( exp
-              ( case transformFuncName name env of
+              ( case transformName name env of
                   Left (func, arity) ->
                     if argLen == arity
                       then func
