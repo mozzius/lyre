@@ -56,4 +56,4 @@ data Block
 data Type
   = Type [String]
   | Untyped
-  deriving (Show)
+  deriving (Eq, Show)

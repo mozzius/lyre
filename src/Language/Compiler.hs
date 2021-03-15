@@ -14,6 +14,8 @@ import Prelude hiding (exp)
 
 data Func = Func Lyre.Stmt String Int
 
+type Env = ([(String, Int)], [(String, String)])
+
 getFunc :: Lyre.Stmt -> Func
 getFunc (Lyre.StrFuncDef name args block) = Func (Lyre.StrFuncDef name args block) name (length args)
 getFunc _ = error "Statement was not StrFuncDef"
@@ -81,38 +83,38 @@ constructFileName str =
         ]
     )
 
-transformName :: String -> ([(String, Int)], [(String, String)]) -> Either (Erl.Exp, Int) Erl.Exp
+transformName :: String -> Env -> Either (Erl.Exp, Int) Erl.Exp
 transformName name (funcs, vars) = case lookup name funcs of
   Just arity -> Left (Erl.Fun (Erl.Function (Erl.Atom name, toInteger arity)), arity)
   Nothing -> case lookup name vars of
     Just newName -> Right (Erl.Var newName)
     Nothing -> error ("Function \"" ++ name ++ "\" not found")
 
-addVar :: String -> ([(String, Int)], [(String, String)]) -> (String, ([(String, Int)], [(String, String)]))
+addVar :: String -> Env -> (String, Env)
 addVar name (funcs, vars) = case lookup name funcs of
   Just _ -> error ("Name \"" ++ name ++ "\" already in use")
   Nothing -> case lookup name vars of
     Just _ -> error ("Name \"" ++ name ++ "\" already in use")
     Nothing -> (underscore name, (funcs, (name, underscore name) : vars))
 
-addArgs :: [Lyre.Argument] -> ([(String, Int)], [(String, String)]) -> ([String], ([(String, Int)], [(String, String)]))
+addArgs :: [Lyre.Argument] -> Env -> ([String], Env)
 addArgs [] env = ([], env)
-addArgs ((Lyre.StrArg arg) : rest) env0 =
-  let (name, env1) = addVar arg env0
-   in let (names, env2) = addArgs rest env1
-       in (name : names, env2)
+addArgs ((Lyre.StrArg arg) : rest) env =
+  let (name, env') = addVar arg env
+   in let (names, env'') = addArgs rest env'
+       in (name : names, env'')
 addArgs ((Lyre.Arg _ _) : _) _ = error "Argument was not stripped of types"
 
 class Compiler source target where
-  compile :: source -> ([(String, Int)], [(String, String)]) -> target
+  compile :: source -> Env -> target
 
 -- For base level function declarations
 instance Compiler Lyre.Stmt Erl.FunDef where
-  compile (Lyre.StrFuncDef name args0 block) env0 =
-    let (args1, env1) = addArgs args0 env0
+  compile (Lyre.StrFuncDef name args0 block) env =
+    let (args1, env') = addArgs args0 env
      in Erl.FunDef
           (Erl.Constr (Erl.Function (Erl.Atom name, toInteger $ length args0)))
-          (Erl.Constr (Erl.Lambda args1 (compile block env1)))
+          (Erl.Constr (Erl.Lambda args1 (compile block env')))
   compile _ _ = error "Only (type-stripped) FuncDefs are allowed at the base level of a program"
 
 instance Compiler Lyre.Stmts Erl.Exp where
@@ -120,10 +122,10 @@ instance Compiler Lyre.Stmts Erl.Exp where
   compile ((Lyre.StrLet name0 expr) : rest) env =
     let (name1, newEnv) = addVar name0 env
      in Erl.Let ([name1], exp $ compile expr newEnv) (exp $ compile rest newEnv)
-  compile ((Lyre.StrFuncDef name0 args0 block) : rest) env0 =
-    let (name1, env1) = addVar name0 env0
-     in let (args1, env2) = addArgs args0 env1
-         in Erl.Let ([name1], exp (Erl.Lambda args1 (compile block env2))) (exp $ compile rest env1)
+  compile ((Lyre.StrFuncDef name0 args0 block) : rest) env =
+    let (name1, env') = addVar name0 env
+     in let (args1, env'') = addArgs args0 env'
+         in Erl.Let ([name1], exp (Erl.Lambda args1 (compile block env''))) (exp $ compile rest env')
   compile ((Lyre.If expr block) : rest) env =
     Erl.Seq (exp $ compile (Lyre.If expr block) env) (exp $ compile rest env)
   compile ((Lyre.IfElse expr block elseBlock) : rest) env =

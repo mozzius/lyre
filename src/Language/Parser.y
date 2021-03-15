@@ -80,7 +80,7 @@ OptType :: { Type }
   |                                              { Untyped }
 
 Assignment :: { Stmt }
-  : let var OptType '=' Expression               { Let $2 $3 $5 }
+  : let var ':' Type '=' Expression               { Let $2 $4 $6 }
 
 If :: { Stmt }
   : if '(' Expression ')' Block else If          { IfElseIf $3 $5 $7 }
