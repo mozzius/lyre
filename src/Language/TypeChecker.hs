@@ -32,8 +32,8 @@ instance TypeChecker Stmts where
           else error "Type error"
 
 instance TypeChecker Stmt where
-  check (Let name type' expr) env = StrLet name expr
-  check (FuncDef name args _ block) env = StrFuncDef name (map check args) (check block)
+  check (Let name type' expr) env = name expr
+  check (FuncDef name args _ block) env = FunDef name (map check args) (check block)
   check (If expr block) env = If expr (check block)
   check (IfElse expr block1 block2) env = IfElse expr (check block1) (check block2)
   check (IfElseIf expr block stmt) env = IfElseIf expr (check block) (check stmt)
