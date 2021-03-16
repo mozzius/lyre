@@ -53,7 +53,15 @@ data Block
   | Expr Expr
   deriving (Show)
 
+data OptType
+  = Type Type
+  | Nothing
+  deriving (Eq, Show)
+
 data Type
-  = Type [String]
-  | Untyped
+  = BoolType
+  | StringType
+  | IntType
+  | FuncType [Type] OptType
+  | ChannelType Type
   deriving (Eq, Show)

@@ -121,71 +121,98 @@ instance Compiler Lyre.Stmts Erl.Exp where
   compile [] _ = atom "ok"
   compile ((Lyre.StrLet name0 expr) : rest) env =
     let (name1, newEnv) = addVar name0 env
-     in Erl.Let ([name1], exp $ compile expr newEnv) (exp $ compile rest newEnv)
+     in Erl.Let
+          ([name1], exp $ compile expr newEnv)
+          (exp $ compile rest newEnv)
   compile ((Lyre.StrFuncDef name0 args0 block) : rest) env =
     let (name1, env') = addVar name0 env
      in let (args1, env'') = addArgs args0 env'
-         in Erl.Let ([name1], exp (Erl.Lambda args1 (compile block env''))) (exp $ compile rest env')
+         in Erl.Let
+              ([name1], exp (Erl.Lambda args1 (compile block env'')))
+              (exp $ compile rest env')
   compile ((Lyre.If expr block) : rest) env =
-    Erl.Seq (exp $ compile (Lyre.If expr block) env) (exp $ compile rest env)
+    Erl.Case
+      (Erl.Exps (Erl.Constr []))
+      [ Erl.Constr
+          ( Erl.Alt
+              (Erl.Pats [])
+              ( Erl.Guard
+                  (exp $ compile expr env)
+              )
+              ( exp
+                  ( case block of
+                      (Lyre.Curly stmts) -> compile (stmts ++ rest) env
+                      (Lyre.Expr expr') ->
+                        Erl.Seq
+                          (exp $ compile expr' env)
+                          (exp $ compile rest env)
+                  )
+              )
+          )
+      ]
   compile ((Lyre.IfElse expr block elseBlock) : rest) env =
-    Erl.Seq (exp $ compile (Lyre.IfElse expr block elseBlock) env) (exp $ compile rest env)
+    Erl.Case
+      (Erl.Exps (Erl.Constr []))
+      [ Erl.Constr
+          ( Erl.Alt
+              (Erl.Pats [])
+              ( Erl.Guard
+                  (exp $ compile expr env)
+              )
+              ( exp
+                  ( case block of
+                      (Lyre.Curly stmts) -> compile (stmts ++ rest) env
+                      (Lyre.Expr expr') ->
+                        Erl.Seq
+                          (exp $ compile expr' env)
+                          (exp $ compile rest env)
+                  )
+              )
+          ),
+        Erl.Constr
+          ( Erl.Alt
+              (Erl.Pats [])
+              (Erl.Guard (expAtom "true"))
+              ( exp
+                  ( case elseBlock of
+                      (Lyre.Curly stmts) -> compile (stmts ++ rest) env
+                      (Lyre.Expr expr') ->
+                        Erl.Seq
+                          (exp $ compile expr' env)
+                          (exp $ compile rest env)
+                  )
+              )
+          )
+      ]
   compile ((Lyre.IfElseIf expr block next) : rest) env =
-    Erl.Seq (exp $ compile (Lyre.IfElseIf expr block next) env) (exp $ compile rest env)
+    Erl.Case
+      (Erl.Exps (Erl.Constr []))
+      [ Erl.Constr
+          ( Erl.Alt
+              (Erl.Pats [])
+              ( Erl.Guard
+                  (exp $ compile expr env)
+              )
+              ( exp
+                  ( case block of
+                      (Lyre.Curly stmts) -> compile (stmts ++ rest) env
+                      (Lyre.Expr expr') ->
+                        Erl.Seq
+                          (exp $ compile expr' env)
+                          (exp $ compile rest env)
+                  )
+              )
+          ),
+        Erl.Constr
+          ( Erl.Alt
+              (Erl.Pats [])
+              (Erl.Guard (expAtom "true"))
+              (exp $ compile (next : rest) env)
+          )
+      ]
   compile ((Lyre.Return expr) : _) env = compile expr env
   compile (Lyre.Let {} : _) _ = error "Let statement is still typed, please strip types before compilation"
   compile (Lyre.FuncDef {} : _) _ = error "FuncDef statement is still typed, please strip types before compilation"
-
-instance Compiler Lyre.Stmt Erl.Exp where
-  compile (Lyre.If expr block) env =
-    Erl.Case
-      (Erl.Exps (Erl.Constr []))
-      [ Erl.Constr
-          ( Erl.Alt
-              (Erl.Pats [])
-              ( Erl.Guard
-                  (exp $ compile expr env)
-              )
-              (compile block env)
-          )
-      ]
-  compile (Lyre.IfElse expr block elseBlock) env =
-    Erl.Case
-      (Erl.Exps (Erl.Constr []))
-      [ Erl.Constr
-          ( Erl.Alt
-              (Erl.Pats [])
-              ( Erl.Guard
-                  (exp $ compile expr env)
-              )
-              (compile block env)
-          ),
-        Erl.Constr
-          ( Erl.Alt
-              (Erl.Pats [])
-              (Erl.Guard (expAtom "true"))
-              (compile elseBlock env)
-          )
-      ]
-  compile (Lyre.IfElseIf expr block next) env =
-    Erl.Case
-      (Erl.Exps (Erl.Constr []))
-      [ Erl.Constr
-          ( Erl.Alt
-              (Erl.Pats [])
-              ( Erl.Guard
-                  (exp $ compile expr env)
-              )
-              (compile block env)
-          ),
-        Erl.Constr
-          ( Erl.Alt
-              (Erl.Pats [])
-              (Erl.Guard (expAtom "true"))
-              (exp $ compile next env)
-          )
-      ]
-  compile _ _ = error "Not sure how you ended up here, this is for if statements"
 
 instance Compiler Lyre.BinOp String where
   compile Lyre.Or _ = "or"

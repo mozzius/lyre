@@ -1,6 +1,7 @@
 module Language.Pretty where
 
 import Language.Syntax
+import Prelude hiding (Nothing)
 
 prettys :: Stmts -> String
 prettys = concatMap (\x -> pretty x ++ " ")
@@ -9,7 +10,7 @@ class Pretty p where
   pretty :: p -> String
 
 instance Pretty Stmt where
-  pretty (Let name typ expr) = "LET " ++ name ++ " " ++ pretty typ ++ pretty expr
+  pretty (Let name type' expr) = "LET " ++ name ++ " " ++ pretty type' ++ pretty expr
   pretty (Return expr) = "RETURN " ++ pretty expr
   pretty (FuncDef name args typ block) = "FUNC " ++ name ++ " " ++ unwords (map pretty args) ++ " " ++ pretty typ ++ pretty block
   pretty (If expr block) = "IF " ++ pretty expr ++ pretty block
@@ -27,12 +28,19 @@ instance Pretty BinOp where
 instance Pretty UnaOp where
   pretty Inv = "NOT "
 
+instance Pretty OptType where
+  pretty (Type types) = ": " ++ pretty types
+  pretty Nothing = ": NOTHING "
+
 instance Pretty Type where
-  pretty (Type types) = ": " ++ unwords types
-  pretty Untyped = ": UNTYPED "
+  pretty BoolType = "BOOLEAN"
+  pretty IntType = "INT"
+  pretty StringType = "STRING"
+  pretty (FuncType argTypes returnType) = "FUNC (" ++ unwords (map pretty argTypes) ++ ") : " ++ pretty returnType
+  pretty (ChannelType type') = "CHANNEL (" ++ pretty type' ++ ")"
 
 instance Pretty Argument where
-  pretty (Arg name typ) = name ++ " " ++ pretty typ
+  pretty (Arg name type') = name ++ " " ++ pretty type'
 
 instance Pretty Expr where
   pretty (BinOp operator exp1 exp2) = "EXPR " ++ pretty operator ++ pretty exp1 ++ pretty exp2
@@ -40,8 +48,9 @@ instance Pretty Expr where
   pretty (Int integer) = show integer ++ " "
   pretty (Var name) = name ++ " "
   pretty (Brack exp) = pretty exp
-  pretty (App name exps) = "CALL " ++ name ++ " "
-    ++ concatMap (\x -> pretty x ++ " ") exps
+  pretty (App name exps) =
+    "CALL " ++ name ++ " "
+      ++ concatMap (\x -> pretty x ++ " ") exps
 
 instance Pretty Block where
   pretty (Curly stmts) = prettys stmts
