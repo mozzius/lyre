@@ -65,6 +65,11 @@ tokens :-
   "&&"                          { \p _ -> TokenConj p }
   "!"                           { \p _ -> TokenNot p }
   ","                           { \p _ -> TokenComma p }
+  "int"                         { \p _ -> TokenIntType p }
+  "string"                      { \p _ -> TokenStringType p }
+  "bool"                        { \p _ -> TokenBoolType p }
+  "func"                        { \p _ -> TokenFuncType p }
+  "channel"                     { \p _ -> TokenChannelType p }
 
 {
 
@@ -102,6 +107,11 @@ data Token
   | TokenIf            AlexPosn
   | TokenElse          AlexPosn
   | TokenBoolean       AlexPosn String
+  | TokenIntType       AlexPosn
+  | TokenBoolType      AlexPosn
+  | TokenStringType    AlexPosn
+  | TokenChannelType   AlexPosn
+  | TokenFuncType      AlexPosn
   deriving (Eq, Show, Generic)
 
 symString :: Token -> String
@@ -146,6 +156,12 @@ getPos (TokenStringLiteral (AlexPn _ line col) _) = ("StringLit",   line, col)
 getPos (TokenIf            (AlexPn _ line col)  ) = ("If",          line, col)
 getPos (TokenElse          (AlexPn _ line col)  ) = ("Else",        line, col)
 getPos (TokenBoolean       (AlexPn _ line col) _) = ("Boolean",     line, col)
+getPos (TokenIntType       (AlexPn _ line col)  ) = ("IntType",     line, col)
+getPos (TokenStringType    (AlexPn _ line col)  ) = ("StringType",  line, col)
+getPos (TokenBoolType      (AlexPn _ line col)  ) = ("BoolType",    line, col)
+getPos (TokenChannelType   (AlexPn _ line col)  ) = ("ChannelType", line, col)
+getPos (TokenFuncType      (AlexPn _ line col)  ) = ("FuncType",    line, col)
+
 
 trim :: [Token] -> [Token]
 trim = reverse . trimNL . reverse . trimNL

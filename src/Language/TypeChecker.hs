@@ -10,10 +10,7 @@ type Env = [(String, Type)]
 getEnv :: Stmts -> Env
 getEnv =
   map
-    ( \(FuncDef name _ ftype _) -> case ftype of
-        (Type types) -> (name, Type ("func" : types))
-        Untyped -> (name, Type ["func"])
-    )
+    (\(FuncDef name args ftype _) -> (name, FuncType (map (\(Arg _ atype) -> atype) args) ftype))
 
 typeCheck :: Stmts -> Stmts
 typeCheck stmts =

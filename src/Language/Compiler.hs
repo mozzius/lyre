@@ -12,20 +12,20 @@ import qualified Language.CoreErlang.Syntax as Erl
 import qualified Language.Syntax as Lyre
 import Prelude hiding (exp)
 
-data Func = Func Lyre.Stmt String Int
+type FuncSig = (String, Int)
 
-type Env = ([(String, Int)], [(String, String)])
+type Env = ([FuncSig], [(String, String)])
 
-getFunc :: Lyre.Stmt -> Func
-getFunc (Lyre.StrFuncDef name args block) = Func (Lyre.StrFuncDef name args block) name (length args)
-getFunc _ = error "Statement was not StrFuncDef"
+getFuncSig :: Lyre.Stmt -> FuncSig
+getFuncSig (Lyre.FuncDef name args _ _) = (name, length args)
+getFuncSig _ = error "Statement was not FuncDef"
 
-getFuncs :: Lyre.Stmts -> [Func]
+getFuncs :: Lyre.Stmts -> [FuncSig]
 getFuncs =
   map
     ( \case
-        (Lyre.StrFuncDef name args block) -> getFunc (Lyre.StrFuncDef name args block)
-        _ -> error "Base level of Lyre programs should be FuncDefs (with stripped types)"
+        (Lyre.FuncDef name args type' block) -> getFuncSig (Lyre.FuncDef name args type' block)
+        _ -> error "Base level of Lyre programs should be FuncDefs"
     )
 
 compileModule :: String -> Lyre.Stmts -> Erl.Module
@@ -33,9 +33,9 @@ compileModule name program =
   let funcs = getFuncs program
    in Erl.Module
         (Erl.Atom name)
-        (map (\(Func _ fname arity) -> Erl.Function (Erl.Atom fname, toInteger arity)) funcs)
+        (map (\(fname, arity) -> Erl.Function (Erl.Atom fname, toInteger arity)) funcs)
         [(Erl.Atom "file", constructFileName name)]
-        (map (`compile` (map (\(Func _ fname arity) -> (fname, arity)) funcs, [])) program)
+        (map (`compile` (funcs, [])) program)
 
 underscore :: String -> String
 underscore str = "_" ++ str
@@ -99,36 +99,35 @@ addVar name (funcs, vars) = case lookup name funcs of
 
 addArgs :: [Lyre.Argument] -> Env -> ([String], Env)
 addArgs [] env = ([], env)
-addArgs ((Lyre.StrArg arg) : rest) env =
+addArgs ((Lyre.Arg arg _) : rest) env =
   let (name, env') = addVar arg env
    in let (names, env'') = addArgs rest env'
        in (name : names, env'')
-addArgs ((Lyre.Arg _ _) : _) _ = error "Argument was not stripped of types"
 
 class Compiler source target where
   compile :: source -> Env -> target
 
 -- For base level function declarations
 instance Compiler Lyre.Stmt Erl.FunDef where
-  compile (Lyre.StrFuncDef name args0 block) env =
-    let (args1, env') = addArgs args0 env
+  compile (Lyre.FuncDef name args _ block) env =
+    let (args', env') = addArgs args env
      in Erl.FunDef
-          (Erl.Constr (Erl.Function (Erl.Atom name, toInteger $ length args0)))
-          (Erl.Constr (Erl.Lambda args1 (compile block env')))
-  compile _ _ = error "Only (type-stripped) FuncDefs are allowed at the base level of a program"
+          (Erl.Constr (Erl.Function (Erl.Atom name, toInteger $ length args)))
+          (Erl.Constr (Erl.Lambda args' (compile block env')))
+  compile _ _ = error "Only FuncDefs are allowed at the base level of a program"
 
 instance Compiler Lyre.Stmts Erl.Exp where
   compile [] _ = atom "ok"
-  compile ((Lyre.StrLet name0 expr) : rest) env =
-    let (name1, newEnv) = addVar name0 env
+  compile ((Lyre.Let name _ expr) : rest) env =
+    let (name', newEnv) = addVar name env
      in Erl.Let
-          ([name1], exp $ compile expr newEnv)
+          ([name'], exp $ compile expr newEnv)
           (exp $ compile rest newEnv)
-  compile ((Lyre.StrFuncDef name0 args0 block) : rest) env =
-    let (name1, env') = addVar name0 env
-     in let (args1, env'') = addArgs args0 env'
+  compile ((Lyre.FuncDef name args _ block) : rest) env =
+    let (name', env') = addVar name env
+     in let (args', env'') = addArgs args env'
          in Erl.Let
-              ([name1], exp (Erl.Lambda args1 (compile block env'')))
+              ([name'], exp (Erl.Lambda args' (compile block env'')))
               (exp $ compile rest env')
   compile ((Lyre.If expr block) : rest) env =
     Erl.Case
@@ -211,9 +210,6 @@ instance Compiler Lyre.Stmts Erl.Exp where
           )
       ]
   compile ((Lyre.Return expr) : _) env = compile expr env
-  compile (Lyre.Let {} : _) _ = error "Let statement is still typed, please strip types before compilation"
-  compile (Lyre.FuncDef {} : _) _ = error "FuncDef statement is still typed, please strip types before compilation"
-
 instance Compiler Lyre.BinOp String where
   compile Lyre.Or _ = "or"
   compile Lyre.And _ = "and"

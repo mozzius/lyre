@@ -5,17 +5,14 @@ type Stmts = [Stmt]
 data Stmt
   = Let String Type Expr
   | Return Expr
-  | FuncDef String [Argument] Type Block
+  | FuncDef String [Argument] OptType Block
   | If Expr Block
   | IfElse Expr Block Block
   | IfElseIf Expr Block Stmt
-  | StrLet String Expr
-  | StrFuncDef String [Argument] Block
   deriving (Show)
 
 data Argument
   = Arg String Type
-  | StrArg String
   deriving (Show)
 
 data BinOp
@@ -55,7 +52,7 @@ data Block
 
 data OptType
   = Type Type
-  | Nothing
+  | NoType
   deriving (Eq, Show)
 
 data Type

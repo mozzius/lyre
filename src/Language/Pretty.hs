@@ -1,7 +1,6 @@
 module Language.Pretty where
 
 import Language.Syntax
-import Prelude hiding (Nothing)
 
 prettys :: Stmts -> String
 prettys = concatMap (\x -> pretty x ++ " ")
@@ -30,7 +29,7 @@ instance Pretty UnaOp where
 
 instance Pretty OptType where
   pretty (Type types) = ": " ++ pretty types
-  pretty Nothing = ": NOTHING "
+  pretty NoType = ": NO TYPE "
 
 instance Pretty Type where
   pretty BoolType = "BOOLEAN"

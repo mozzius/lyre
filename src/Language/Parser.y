@@ -41,6 +41,11 @@ import Data.List
   '<='          { TokenLEq _ }
   '>='          { TokenGEq _ } 
   nl            { TokenNL _ }
+  'bool'        { TokenBoolType _ }
+  'int'         { TokenIntType _ }
+  'string'      { TokenStringType _ }
+  'func'        { TokenFuncType _ }
+  'channel'     { TokenChannelType _ }
 
 %%
 
@@ -69,18 +74,23 @@ Statement :: { Stmt }
   | If                                           { $1 }
 
 Type :: { Type }
-  : var Types                                    { Type ($1:$2) }
+  : 'int'                                        { BoolType }
+  | 'string'                                     { StringType }
+  | 'bool'                                       { BoolType }
+  | 'channel' Type                               { ChannelType $2 }
+  | 'func' TypeList OptType                      { FuncType $2 $3 }
 
-Types :: { [String] }
-  : var Types                                    { $1:$2 }
+TypeList :: { [Type] }
+  : Type ',' TypeList                            { $1:$3 }
+  | Type                                         { [$1] }
   |                                              { [] }
 
-OptType :: { Type }
-  : ':' Type                                     { $2 }
-  |                                              { Untyped }
+OptType :: { OptType }
+  : ':' Type                                     { Type $2 }
+  |                                              { NoType }
 
 Assignment :: { Stmt }
-  : let var ':' Type '=' Expression               { Let $2 $4 $6 }
+  : let var ':' Type '=' Expression              { Let $2 $4 $6 }
 
 If :: { Stmt }
   : if '(' Expression ')' Block else If          { IfElseIf $3 $5 $7 }
