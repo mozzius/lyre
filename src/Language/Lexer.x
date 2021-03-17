@@ -43,7 +43,6 @@ tokens :-
   int                           { \p _ -> TokenIntType p }
   string                        { \p _ -> TokenStringType p }
   bool                          { \p _ -> TokenBoolType p }
-  func                          { \p _ -> TokenFuncType p }
   channel                       { \p _ -> TokenChannelType p }
   @boolean                      { \p s -> TokenBoolean p s }
   @sym				                  { \p s -> TokenVar p s }
@@ -70,6 +69,7 @@ tokens :-
   "&&"                          { \p _ -> TokenConj p }
   "!"                           { \p _ -> TokenNot p }
   ","                           { \p _ -> TokenComma p }
+  "->"                          { \p _ -> TokenArrow p }
 
 {
 
@@ -111,7 +111,7 @@ data Token
   | TokenBoolType      AlexPosn
   | TokenStringType    AlexPosn
   | TokenChannelType   AlexPosn
-  | TokenFuncType      AlexPosn
+  | TokenArrow         AlexPosn
   deriving (Eq, Show, Generic)
 
 symString :: Token -> String
@@ -160,7 +160,7 @@ getPos (TokenIntType       (AlexPn _ line col)  ) = ("IntType",     line, col)
 getPos (TokenStringType    (AlexPn _ line col)  ) = ("StringType",  line, col)
 getPos (TokenBoolType      (AlexPn _ line col)  ) = ("BoolType",    line, col)
 getPos (TokenChannelType   (AlexPn _ line col)  ) = ("ChannelType", line, col)
-getPos (TokenFuncType      (AlexPn _ line col)  ) = ("FuncType",    line, col)
+getPos (TokenArrow         (AlexPn _ line col)  ) = ("Arrow",       line, col)
 
 
 trim :: [Token] -> [Token]

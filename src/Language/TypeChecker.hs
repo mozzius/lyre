@@ -43,7 +43,7 @@ instance TypeChecker Stmts OptType where
      in check rest expectedType env
   check ((FuncDef name args returnType block) : rest) expectedType env =
     let funcType = getFuncSignature args returnType
-     in let env' = (name, funcType) : env
+     in let env' = map (\(Arg argName argType) -> (argName, Type argType)) args ++ ((name, funcType) : env)
          in check block returnType env' && check rest expectedType env'
   check ((If expr block) : rest) expectedType env =
     infer expr env == Type BoolType && check rest expectedType env
@@ -107,14 +107,14 @@ instance TypeChecker Expr OptType where
                       )
   infer (Var name) env = case lookup name env of
     (Just type') -> type'
-    Nothing -> error (name ++ " is undefined")
+    Nothing -> error ("Type error: \"" ++ name ++ "\" is undefined")
   infer (App name exprs) env = case lookup name env of
     (Just (Type (FuncType argTypes returnType))) ->
       if map (`infer` env) exprs == map Type argTypes
-        then Type (FuncType argTypes returnType)
-        else error ("Invalid arguments given to " ++ name)
-    (Just _) -> error (name ++ " is not a function")
-    Nothing -> error (name ++ " is undefined")
+        then returnType
+        else error ("Type error: Invalid arguments given to \"" ++ name ++ "\" - " ++ show (map (`infer` env) exprs :: [OptType]))
+    (Just _) -> error ("Type error: \"" ++ name ++ "\" is not a function")
+    Nothing -> error ("Type error: \"" ++ name ++ "\" is undefined")
   check _ _ _ = error "Cannot check expressions"
 
 instance TypeChecker UnaOp [OptType] where

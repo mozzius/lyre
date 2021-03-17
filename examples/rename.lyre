@@ -1,14 +1,14 @@
 
-func plusone(num: int) : int {
+func plusone(num: int) -> int {
   return num + 1
 }
 
-func main(x: int): int {
-  func plustwo(num: int): int {
+func main(x: int) -> int {
+  func plustwo(num: int) -> int {
     return num + 2
   }
 
-  let renamed = plusone
+  let renamed : func int -> int = plusone
 
   return plusone(renamed(plustwo(x)))
 }

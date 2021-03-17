@@ -29,10 +29,10 @@ parseArgs [path] = do
   let name = takeBaseName path
   file <- readFile path
   let ast = (compileModule name . typeCheck $ parse file) :: Module
-  print ast
   createAndWriteFile ("build" </> name <.> "core") (prettyPrint ast)
   -- compile to BEAM
   callCommand ("erlc build" </> name <.> "core")
+  putStrLn ("Build sucessful\nOutput: " ++ name <.> "beam")
   exitSuccess
 
 usage :: IO ()

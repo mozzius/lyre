@@ -40,11 +40,11 @@ import Data.List
   '!='          { TokenNEq _ }
   '<='          { TokenLEq _ }
   '>='          { TokenGEq _ } 
+  '->'          { TokenArrow _ }
   nl            { TokenNL _ }
   boolType      { TokenBoolType _ }
   intType       { TokenIntType _ }
   stringType    { TokenStringType _ }
-  funcType      { TokenFuncType _ }
   channelType   { TokenChannelType _ }
 
 %%
@@ -79,7 +79,7 @@ Type :: { Type }
   | stringType                                   { StringType }
   | boolType                                     { BoolType }
   | channelType Type                             { ChannelType $2 }
-  | funcType TypeList OptType                    { FuncType $2 $3 }
+  | func TypeList OptType                        { FuncType $2 $3 }
 
 TypeList :: { [Type] }
   : Type ',' TypeList                            { $1:$3 }
@@ -87,7 +87,7 @@ TypeList :: { [Type] }
   |                                              { [] }
 
 OptType :: { OptType }
-  : ':' Type                                     { Type $2 }
+  : '->' Type                                     { Type $2 }
   |                                              { NoType }
 
 Assignment :: { Stmt }
