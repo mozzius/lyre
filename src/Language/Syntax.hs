@@ -9,6 +9,7 @@ data Stmt
   | If Expr Block
   | IfElse Expr Block Block
   | IfElseIf Expr Block Stmt
+  | Expr Expr
   deriving (Show)
 
 data Argument
@@ -47,7 +48,7 @@ data Expr
 
 data Block
   = Curly Stmts
-  | Expr Expr
+  | Inline Expr
   deriving (Show)
 
 data OptType

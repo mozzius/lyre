@@ -15,6 +15,7 @@ instance Pretty Stmt where
   pretty (If expr block) = "IF " ++ pretty expr ++ pretty block
   pretty (IfElse expr block1 block2) = "IFELSE " ++ pretty expr ++ pretty block1 ++ pretty block2
   pretty (IfElseIf expr block stmt) = "IF " ++ pretty expr ++ pretty stmt
+  pretty (Expr expr) = pretty expr
 
 instance Pretty BinOp where
   pretty Or = "OR "
@@ -53,4 +54,4 @@ instance Pretty Expr where
 
 instance Pretty Block where
   pretty (Curly stmts) = prettys stmts
-  pretty (Expr exp) = pretty exp
+  pretty (Inline exp) = pretty exp

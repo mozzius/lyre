@@ -118,6 +118,10 @@ instance Compiler Lyre.Stmt Erl.FunDef where
 
 instance Compiler Lyre.Stmts Erl.Exp where
   compile [] _ = atom "ok"
+  compile ((Lyre.Expr expr) : rest) env =
+    Erl.Seq
+      (exp $ compile expr env)
+      (exp $ compile rest env)
   compile ((Lyre.Let name _ expr) : rest) env =
     let (name', newEnv) = addVar name env
      in Erl.Let
@@ -141,7 +145,7 @@ instance Compiler Lyre.Stmts Erl.Exp where
               ( exp
                   ( case block of
                       (Lyre.Curly stmts) -> compile (stmts ++ rest) env
-                      (Lyre.Expr expr') ->
+                      (Lyre.Inline expr') ->
                         Erl.Seq
                           (exp $ compile expr' env)
                           (exp $ compile rest env)
@@ -161,7 +165,7 @@ instance Compiler Lyre.Stmts Erl.Exp where
               ( exp
                   ( case block of
                       (Lyre.Curly stmts) -> compile (stmts ++ rest) env
-                      (Lyre.Expr expr') ->
+                      (Lyre.Inline expr') ->
                         Erl.Seq
                           (exp $ compile expr' env)
                           (exp $ compile rest env)
@@ -175,7 +179,7 @@ instance Compiler Lyre.Stmts Erl.Exp where
               ( exp
                   ( case elseBlock of
                       (Lyre.Curly stmts) -> compile (stmts ++ rest) env
-                      (Lyre.Expr expr') ->
+                      (Lyre.Inline expr') ->
                         Erl.Seq
                           (exp $ compile expr' env)
                           (exp $ compile rest env)
@@ -195,7 +199,7 @@ instance Compiler Lyre.Stmts Erl.Exp where
               ( exp
                   ( case block of
                       (Lyre.Curly stmts) -> compile (stmts ++ rest) env
-                      (Lyre.Expr expr') ->
+                      (Lyre.Inline expr') ->
                         Erl.Seq
                           (exp $ compile expr' env)
                           (exp $ compile rest env)
@@ -210,6 +214,7 @@ instance Compiler Lyre.Stmts Erl.Exp where
           )
       ]
   compile ((Lyre.Return expr) : _) env = compile expr env
+
 instance Compiler Lyre.BinOp String where
   compile Lyre.Or _ = "or"
   compile Lyre.And _ = "and"
@@ -260,4 +265,4 @@ instance Compiler Lyre.Expr Erl.Exp where
 
 instance Compiler Lyre.Block Erl.Exps where
   compile (Lyre.Curly stmts) env = exp $ compile stmts env
-  compile (Lyre.Expr expr) env = exp $ compile expr env
+  compile (Lyre.Inline expr) env = exp $ compile expr env

@@ -1,48 +1,137 @@
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 
 module Language.TypeChecker where
 
 import Language.Syntax
 
-type Env = [(String, Type)]
+type Env = [(String, OptType)]
 
 getEnv :: Stmts -> Env
 getEnv =
   map
-    (\(FuncDef name args ftype _) -> (name, FuncType (map (\(Arg _ atype) -> atype) args) ftype))
+    ( \(FuncDef name args ftype _) ->
+        (name, getFuncSignature args ftype)
+    )
+
+getFuncSignature :: [Argument] -> OptType -> OptType
+getFuncSignature args return = Type (FuncType (map (\(Arg _ argType) -> argType) args) return)
 
 typeCheck :: Stmts -> Stmts
 typeCheck stmts =
   let env = getEnv stmts
-   in let (_, stmts') = check stmts env
-       in stmts'
+   in if check stmts NoType env
+        then stmts
+        else error "Type check failed"
 
-class TypeChecker t where
-  check :: t -> Env -> (Type, t)
+class TypeChecker t r where
+  infer :: t -> Env -> r
+  check :: t -> r -> Env -> Bool
 
-instance TypeChecker Stmts where
-  check ((Return expr) : _) env =
-    let (exprType, expr') = check expr env
-     in ()
-  check ((Let name ltype expr) : rest) env =
-    let (exprType, expr') = check expr env
-     in if exprType == ltype
-          then check rest ((name, ltype) : env)
-          else error "Type error"
+instance TypeChecker Stmts OptType where
+  check [] expectedType _ = expectedType == NoType
+  check ((Return expr) : _) expectedType env =
+    let exprType = infer expr env
+     in expectedType == exprType
+  check ((Let name exprType expr) : rest) expectedType env =
+    let inferred = infer expr env
+     in Type exprType == inferred
+          && check rest expectedType ((name, Type exprType) : env)
+  check ((Expr expr) : rest) expectedType env =
+    let _ = infer expr env :: OptType -- can't think how else to discard value
+     in check rest expectedType env
+  check ((FuncDef name args returnType block) : rest) expectedType env =
+    let funcType = getFuncSignature args returnType
+     in let env' = (name, funcType) : env
+         in check block returnType env' && check rest expectedType env'
+  check ((If expr block) : rest) expectedType env =
+    infer expr env == Type BoolType && check rest expectedType env
+      && ( case block of
+             (Curly stmts) -> check (stmts ++ rest) expectedType env
+             (Inline expr) -> check (Expr expr : rest) expectedType env
+         )
+  check ((IfElse expr block1 block2) : rest) expectedType env =
+    infer expr env == Type BoolType
+      && ( case block1 of
+             (Curly stmts) -> check (stmts ++ rest) expectedType env
+             (Inline expr) -> check (Expr expr : rest) expectedType env
+         )
+      && ( case block2 of
+             (Curly stmts) -> check (stmts ++ rest) expectedType env
+             (Inline expr) -> check (Expr expr : rest) expectedType env
+         )
+  check ((IfElseIf expr block stmt) : rest) expectedType env =
+    infer expr env == Type BoolType && check (stmt : rest) expectedType env
+      && ( case block of
+             (Curly stmts) -> check (stmts ++ rest) expectedType env
+             (Inline expr) -> check (Expr expr : rest) expectedType env
+         )
+  infer _ _ = error "Cannot infer statements"
 
-instance TypeChecker Stmt where
-  check (Let name type' expr) env = name expr
-  check (FuncDef name args _ block) env = FunDef name (map check args) (check block)
-  check (If expr block) env = If expr (check block)
-  check (IfElse expr block1 block2) env = IfElse expr (check block1) (check block2)
-  check (IfElseIf expr block stmt) env = IfElseIf expr (check block) (check stmt)
-  check rest env = rest
+instance TypeChecker Block OptType where
+  check (Curly stmt) expectedType env = check stmt expectedType env
+  check (Inline expr) expectedType env = check [Expr expr] expectedType env
+  infer _ _ = error "Cannot infer blocks"
 
-instance TypeChecker Argument where
-  check (Arg name _) env = StrArg name
-  check rest env = rest
+instance TypeChecker Expr OptType where
+  infer (Int _) _ = Type IntType
+  infer (String _) _ = Type StringType
+  infer (Boolean _) _ = Type BoolType
+  infer (Brack expr) env = infer expr env
+  infer (UnaOp op expr) env =
+    let opTypes = infer op env :: [OptType]
+     in let exprType = infer expr env
+         in if exprType `elem` opTypes
+              then exprType
+              else
+                error
+                  ( "Type mismatch: "
+                      ++ show op
+                      ++ " cannot be used on type "
+                      ++ show exprType
+                  )
+  infer (BinOp op expr1 expr2) env =
+    let opTypes = infer op env :: [OptType]
+     in let expr1Type = infer expr1 env
+         in let expr2Type = infer expr2 env
+             in if expr1Type == expr2Type && expr1Type `elem` opTypes
+                  then expr1Type
+                  else
+                    error
+                      ( "Type mismatch: " ++ show op
+                          ++ " cannot be used on "
+                          ++ show expr1Type
+                          ++ " and "
+                          ++ show expr2Type
+                      )
+  infer (Var name) env = case lookup name env of
+    (Just type') -> type'
+    Nothing -> error (name ++ " is undefined")
+  infer (App name exprs) env = case lookup name env of
+    (Just (Type (FuncType argTypes returnType))) ->
+      if map (`infer` env) exprs == map Type argTypes
+        then Type (FuncType argTypes returnType)
+        else error ("Invalid arguments given to " ++ name)
+    (Just _) -> error (name ++ " is not a function")
+    Nothing -> error (name ++ " is undefined")
+  check _ _ _ = error "Cannot check expressions"
 
-instance TypeChecker Block where
-  check (Curly stmts) env = Curly (check stmts)
-  check rest env = rest
+instance TypeChecker UnaOp [OptType] where
+  infer Inv _ = [Type BoolType]
+  check _ _ _ = error "Cannot check operators"
+
+instance TypeChecker BinOp [OptType] where
+  infer Or _ = [Type BoolType]
+  infer And _ = [Type BoolType]
+  infer Plus _ = [Type IntType]
+  infer Minus _ = [Type IntType]
+  infer Div _ = [Type IntType]
+  infer Times _ = [Type IntType]
+  infer Equals _ = [Type BoolType, Type StringType, Type IntType]
+  infer NotEquals _ = [Type BoolType, Type StringType, Type IntType]
+  infer GreaterThan _ = [Type BoolType]
+  infer LessThan _ = [Type BoolType]
+  infer GreaterEq _ = [Type BoolType]
+  infer LessEq _ = [Type BoolType]
+  check _ _ _ = error "Cannot check operators"

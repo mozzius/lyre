@@ -5,7 +5,7 @@ import Language.CoreErlang.Parser (parseModule)
 import Language.CoreErlang.Pretty (prettyPrint)
 import Language.CoreErlang.Syntax (Module)
 import Language.Parser (parse)
-import Language.TypeChecker (verify)
+import Language.TypeChecker (typeCheck)
 import System.Directory (createDirectoryIfMissing)
 import System.Environment as Env (getArgs)
 import System.Exit (exitSuccess)
@@ -28,7 +28,7 @@ parseArgs ["-e", path] = erl path >> exitSuccess
 parseArgs [path] = do
   let name = takeBaseName path
   file <- readFile path
-  let ast = (compileModule name . verify $ parse file) :: Module
+  let ast = (compileModule name . typeCheck $ parse file) :: Module
   print ast
   createAndWriteFile ("build" </> name <.> "core") (prettyPrint ast)
   -- compile to BEAM

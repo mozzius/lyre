@@ -55,7 +55,7 @@ Program :: { Stmts }
   | Function                                    { [$1] }
 
 Block :: { Block }
-  : Expression                                   { Expr $1 }
+  : Expression                                   { Inline $1 }
   | '{' OptNL Statements '}'                     { Curly $3 }
 
 OptStatements :: { Stmts }
@@ -72,6 +72,7 @@ Statement :: { Stmt }
   | return Expression                            { Return $2 }
   | Function                                     { $1 }
   | If                                           { $1 }
+  | Expression                                   { Expr $1 }
 
 Type :: { Type }
   : 'int'                                        { BoolType }
