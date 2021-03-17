@@ -40,6 +40,11 @@ tokens :-
   return                        { \p _ -> TokenReturn p }
   if                            { \p s -> TokenIf p }
   else                          { \p s -> TokenElse p }
+  int                           { \p _ -> TokenIntType p }
+  string                        { \p _ -> TokenStringType p }
+  bool                          { \p _ -> TokenBoolType p }
+  func                          { \p _ -> TokenFuncType p }
+  channel                       { \p _ -> TokenChannelType p }
   @boolean                      { \p s -> TokenBoolean p s }
   @sym				                  { \p s -> TokenVar p s }
   @int				                  { \p s -> TokenInt p s }
@@ -65,11 +70,6 @@ tokens :-
   "&&"                          { \p _ -> TokenConj p }
   "!"                           { \p _ -> TokenNot p }
   ","                           { \p _ -> TokenComma p }
-  "int"                         { \p _ -> TokenIntType p }
-  "string"                      { \p _ -> TokenStringType p }
-  "bool"                        { \p _ -> TokenBoolType p }
-  "func"                        { \p _ -> TokenFuncType p }
-  "channel"                     { \p _ -> TokenChannelType p }
 
 {
 

@@ -1,5 +1,5 @@
 
-func plusone(num: int): int {
+func plusone(num: int) : int {
   return num + 1
 }
 

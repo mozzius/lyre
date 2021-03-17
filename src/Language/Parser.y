@@ -41,11 +41,11 @@ import Data.List
   '<='          { TokenLEq _ }
   '>='          { TokenGEq _ } 
   nl            { TokenNL _ }
-  'bool'        { TokenBoolType _ }
-  'int'         { TokenIntType _ }
-  'string'      { TokenStringType _ }
-  'func'        { TokenFuncType _ }
-  'channel'     { TokenChannelType _ }
+  boolType      { TokenBoolType _ }
+  intType       { TokenIntType _ }
+  stringType    { TokenStringType _ }
+  funcType      { TokenFuncType _ }
+  channelType   { TokenChannelType _ }
 
 %%
 
@@ -75,11 +75,11 @@ Statement :: { Stmt }
   | Expression                                   { Expr $1 }
 
 Type :: { Type }
-  : 'int'                                        { BoolType }
-  | 'string'                                     { StringType }
-  | 'bool'                                       { BoolType }
-  | 'channel' Type                               { ChannelType $2 }
-  | 'func' TypeList OptType                      { FuncType $2 $3 }
+  : intType                                      { IntType }
+  | stringType                                   { StringType }
+  | boolType                                     { BoolType }
+  | channelType Type                             { ChannelType $2 }
+  | funcType TypeList OptType                    { FuncType $2 $3 }
 
 TypeList :: { [Type] }
   : Type ',' TypeList                            { $1:$3 }
