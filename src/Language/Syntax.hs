@@ -29,6 +29,7 @@ data BinOp
   | GreaterEq
   | LessEq
   | NotEquals
+  | Concat
   deriving (Show)
 
 data UnaOp

@@ -70,6 +70,7 @@ tokens :-
   "!"                           { \p _ -> TokenNot p }
   ","                           { \p _ -> TokenComma p }
   "->"                          { \p _ -> TokenArrow p }
+  "~"                           { \p _ -> TokenConcat p }
 
 {
 
@@ -112,6 +113,7 @@ data Token
   | TokenStringType    AlexPosn
   | TokenChannelType   AlexPosn
   | TokenArrow         AlexPosn
+  | TokenConcat        AlexPosn
   deriving (Eq, Show, Generic)
 
 symString :: Token -> String
@@ -161,6 +163,7 @@ getPos (TokenStringType    (AlexPn _ line col)  ) = ("StringType",  line, col)
 getPos (TokenBoolType      (AlexPn _ line col)  ) = ("BoolType",    line, col)
 getPos (TokenChannelType   (AlexPn _ line col)  ) = ("ChannelType", line, col)
 getPos (TokenArrow         (AlexPn _ line col)  ) = ("Arrow",       line, col)
+getPos (TokenConcat        (AlexPn _ line col)  ) = ("Concat",      line, col)
 
 
 trim :: [Token] -> [Token]

@@ -41,6 +41,7 @@ import Data.List
   '<='          { TokenLEq _ }
   '>='          { TokenGEq _ } 
   '->'          { TokenArrow _ }
+  '~'           { TokenConcat _ }
   nl            { TokenNL _ }
   boolType      { TokenBoolType _ }
   intType       { TokenIntType _ }
@@ -140,6 +141,7 @@ Comparison :: { Expr }
 Sum :: { Expr }
   : Sum '+' Term                                 { BinOp Plus $1 $3 }
   | Sum '-' Term                                 { BinOp Minus $1 $3 }
+  | Sum '~' Term                                 { BinOp Concat $1 $3 }
   | Term                                         { $1 }
 
 Term :: { Expr }

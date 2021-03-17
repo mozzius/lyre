@@ -228,6 +228,7 @@ instance Compiler Lyre.BinOp String where
   compile Lyre.GreaterEq _ = ">="
   compile Lyre.LessEq _ = "<="
   compile Lyre.NotEquals _ = "/="
+  compile Lyre.Concat _ = "++"
 
 instance Compiler Lyre.UnaOp String where
   compile Lyre.Inv _ = "not"

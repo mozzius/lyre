@@ -134,4 +134,5 @@ instance TypeChecker BinOp [OptType] where
   infer LessThan _ = [Type BoolType]
   infer GreaterEq _ = [Type BoolType]
   infer LessEq _ = [Type BoolType]
+  infer Concat _ = [Type StringType]
   check _ _ _ = error "Cannot check operators"
