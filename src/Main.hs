@@ -24,30 +24,38 @@ main = Env.getArgs >>= parseArgs
 parseArgs :: [String] -> IO ()
 parseArgs ["-h"] = usage >> exitSuccess
 parseArgs ["-v"] = version >> exitSuccess
-parseArgs ["-e", path] = erl path >> exitSuccess
+parseArgs ["-parse", path] = erl path >> exitSuccess
+parseArgs ["-run", path] = run path >> exitSuccess
 parseArgs [path] = do
   let name = takeBaseName path
   file <- readFile path
-  let ast = (compileModule name . typeCheck $ parse file) :: Module
+  let ast = (compileModule name $ parse file) :: Module
   createAndWriteFile ("build" </> name <.> "core") (prettyPrint ast)
   -- compile to BEAM
   callCommand ("erlc build" </> name <.> "core")
-  putStrLn ("Build sucessful\nOutput: " ++ name <.> "beam")
+  putStrLn
+    ( "Build sucessful\n"
+        ++ "Output: "
+        ++ name <.> "beam"
+    )
   exitSuccess
+parseArgs _ = usage >> exitSuccess 
 
 usage :: IO ()
 usage =
   putStrLn
-    ( "Usage: lyre path   Compile Lyre code to BEAM\n"
-        ++ "       lyre -v     Get Lyre version\n"
-        ++ "       lyre -h     View available commands"
+    ( "Usage: lyre <path>     Compile Lyre code to BEAM\n"
+        ++ "       lyre -x <path>  Execute BEAM code (WIP)\n"
+        ++ "       lyre -v         Get Lyre version\n"
+        ++ "       lyre -h         View available commands\n"
+        ++ "       lyre -p <path>  Convert Erlang to CoreErlang"
     )
 
 version :: IO ()
 version = putStrLn "Lyre v0.0.1"
 
--- run
--- callCommand "erl -noshell -s test main -s init stop"
+run :: String -> IO ()
+run path = callCommand ("erl -noshell -s " ++ path ++ " main -s init stop")
 
 erl :: FilePath -> IO ()
 erl path = do

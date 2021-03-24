@@ -1,57 +1,76 @@
 module Language.Pretty where
 
+import Data.List
 import Language.Syntax
 
 prettys :: Stmts -> String
-prettys = concatMap (\x -> pretty x ++ " ")
+prettys stmts = intercalate "\n" (map pretty stmts)
 
 class Pretty p where
   pretty :: p -> String
 
 instance Pretty Stmt where
-  pretty (Let name type' expr) = "LET " ++ name ++ " " ++ pretty type' ++ pretty expr
-  pretty (Return expr) = "RETURN " ++ pretty expr
-  pretty (FuncDef name args typ block) = "FUNC " ++ name ++ " " ++ unwords (map pretty args) ++ " " ++ pretty typ ++ pretty block
-  pretty (If expr block) = "IF " ++ pretty expr ++ pretty block
-  pretty (IfElse expr block1 block2) = "IFELSE " ++ pretty expr ++ pretty block1 ++ pretty block2
-  pretty (IfElseIf expr block stmt) = "IF " ++ pretty expr ++ pretty stmt
+  pretty (Let name type' expr) =
+    "let" ++ name
+      ++ ": "
+      ++ pretty type'
+      ++ " "
+      ++ pretty expr
+  pretty (Return expr) = "return " ++ pretty expr
+  pretty (FuncDef name args typ block) = "func " ++ name ++ "(" ++ intercalate ", " (map pretty args) ++ " " ++ pretty typ ++ pretty block
+  pretty (If expr block) = "if (" ++ pretty expr ++ ")" ++ pretty block
+  pretty (IfElse expr block1 block2) = "if (" ++ pretty expr ++ ") " ++ pretty block1 ++ " else " ++ pretty block2
+  pretty (IfElseIf expr block stmt) = "if (" ++ pretty expr ++ ") " ++ pretty block ++ " " ++ pretty stmt
   pretty (Expr expr) = pretty expr
 
 instance Pretty BinOp where
-  pretty Or = "OR "
-  pretty And = "AND "
-  pretty Plus = "PLUS "
-  pretty Minus = "MINUS "
-  pretty Div = "DIV "
-  pretty Times = "TIMES "
+  pretty Or = "||"
+  pretty And = "&&"
+  pretty Plus = "+"
+  pretty Minus = "-"
+  pretty Div = "/"
+  pretty Times = "*"
+  pretty Equals = "=="
+  pretty NotEquals = "!="
+  pretty GreaterThan = ">"
+  pretty LessThan = "<"
+  pretty GreaterEq = ">="
+  pretty LessEq = "<="
+  pretty Concat = "~"
 
 instance Pretty UnaOp where
-  pretty Inv = "NOT "
+  pretty Inv = "!"
 
 instance Pretty OptType where
-  pretty (Type types) = ": " ++ pretty types
-  pretty NoType = ": NO TYPE "
+  pretty (Type type') = pretty type'
+  pretty NoType = "NoType"
 
 instance Pretty Type where
-  pretty BoolType = "BOOLEAN"
-  pretty IntType = "INT"
-  pretty StringType = "STRING"
-  pretty (FuncType argTypes returnType) = "FUNC (" ++ unwords (map pretty argTypes) ++ ") : " ++ pretty returnType
-  pretty (ChannelType type') = "CHANNEL (" ++ pretty type' ++ ")"
+  pretty BoolType = "boolean"
+  pretty IntType = "int"
+  pretty StringType = "string"
+  pretty (FuncType argTypes returnType) =
+    "func (" ++ intercalate "," (map pretty argTypes) ++ ")"
+      ++ ( case returnType of
+             NoType -> ""
+             _ -> " -> " ++ pretty returnType
+         )
+  pretty (ChannelType type') = "channel " ++ pretty type'
 
 instance Pretty Argument where
-  pretty (Arg name type') = name ++ " " ++ pretty type'
+  pretty (Arg name type') = name ++ ":" ++ pretty type'
 
 instance Pretty Expr where
-  pretty (BinOp operator exp1 exp2) = "EXPR " ++ pretty operator ++ pretty exp1 ++ pretty exp2
-  pretty (UnaOp operator exp) = "EXPR " ++ pretty operator ++ pretty exp
-  pretty (Int integer) = show integer ++ " "
-  pretty (Var name) = name ++ " "
-  pretty (Brack exp) = pretty exp
+  pretty (BinOp operator exp1 exp2) = pretty exp1 ++ " " ++ pretty operator ++ " " ++ pretty exp2
+  pretty (UnaOp operator exp) = pretty operator ++ pretty exp
+  pretty (Int integer) = show integer
+  pretty (Var name) = name
+  pretty (Brack exp) = "(" ++ pretty exp ++ ")"
   pretty (App name exps) =
-    "CALL " ++ name ++ " "
-      ++ concatMap (\x -> pretty x ++ " ") exps
+    name ++ "("
+      ++ intercalate ", " (map pretty exps)
+      ++ ")"
 
 instance Pretty Block where
-  pretty (Curly stmts) = prettys stmts
+  pretty (Curly stmts) = "{\n" ++ prettys stmts ++ "\n}"
   pretty (Inline exp) = pretty exp

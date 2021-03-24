@@ -42,6 +42,7 @@ import Data.List
   '>='          { TokenGEq _ } 
   '->'          { TokenArrow _ }
   '~'           { TokenConcat _ }
+  '::'          { TokenAssert _ }
   nl            { TokenNL _ }
   boolType      { TokenBoolType _ }
   intType       { TokenIntType _ }
@@ -160,6 +161,7 @@ Factor :: { Expr }
   | stringLiteral                                { String (init . tail $ $1) }
   | '(' Expression ')'                           { Brack $2 }
   | funcName OptExprList ')'                     { App (init $1) $2 }
+  | Expression '::' Type                         { Enforce $1 $3}
 
 OptNL
   : OptNL nl                                     {}

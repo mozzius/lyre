@@ -1,6 +1,6 @@
 -module(channel).
 
--export([channel/0, channel/1, send/2, recv/1, close/1, test/0, test/1]).
+-export([channel/0, channel/1, send/2, recv/1, close/1]).
 
 channel() -> spawn(channel, channel, [[]]).
 
@@ -23,17 +23,3 @@ recv(Channel) ->
 send(Channel, Msg) -> Channel ! {send, Msg}.
 
 close(Channel) -> Channel ! close.
-
-test() ->
-    Channel = channel(),
-    send(Channel, "hello"),
-    timer:sleep(500),
-    spawn(channel, test, [Channel]),
-    timer:sleep(500),
-    send(Channel, "world"),
-    timer:sleep(500),
-    close(Channel).
-
-test(Channel) ->
-    io:format("Recv: ~p~n", [recv(Channel)]),
-    io:format("Recv: ~p~n", [recv(Channel)]).

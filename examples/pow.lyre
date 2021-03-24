@@ -1,0 +1,8 @@
+
+func pow(num: int, to: int) -> int {
+  if (to > 0) {
+    return num * pow(num, to - 1)
+  } else {
+    return 1
+  }
+}

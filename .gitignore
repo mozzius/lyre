@@ -1,5 +1,5 @@
 .stack-work/
 *~
 build/
-test.core
-test.beam
+*.core
+*.beam
