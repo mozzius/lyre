@@ -3,6 +3,7 @@ module Language.Parser where
 import Language.Syntax
 import Language.Lexer
 import Data.List
+import Debug.Trace
 }
 
 %name program Program
@@ -89,11 +90,11 @@ TypeList :: { [Type] }
   |                                              { [] }
 
 OptType :: { OptType }
-  : '->' Type                                     { Type $2 }
+  : '->' Type                                    { Type $2 }
   |                                              { NoType }
 
 Assignment :: { Stmt }
-  : let var ':' Type '=' Expression              { Let $2 $4 $6 }
+  : let var ':' Type '=' Expression              { if available $2 then  Let $2 $4 $6 else error ("Parse error: \"" ++ $2 ++ "\" is a reserved name") }
 
 If :: { Stmt }
   : if '(' Expression ')' Block else If          { IfElseIf $3 $5 $7 }
@@ -101,7 +102,7 @@ If :: { Stmt }
   | if '(' Expression ')' Block                  { If $3 $5 }
 
 Function :: { Stmt }
-  : func funcName OptArguments ')' OptType Block { FuncDef (init $2) $3 $5 $6 }
+  : func funcName OptArguments ')' OptType Block { if available (init $2) then FuncDef (init $2) $3 $5 $6 else error ("Parse error: \"" ++ (init $2) ++ "\" is a reserved name") }
 
 OptArguments :: { [Argument] }
   : Arguments                                    { $1 }
@@ -109,7 +110,7 @@ OptArguments :: { [Argument] }
 
 Arguments :: { [Argument] }
   : var ':' Type ',' Arguments                   { (Arg $1 $3):$5 }
-  | var ':' Type                                 { [Arg $1 $3] }
+  | var ':' Type                                 { if available $1 then [Arg $1 $3] else error ("Parse error: \"" ++ $1 ++ "\" is a reserved name") }
 
 OptExprList :: { [Expr] }
   : ExprList                                     { $1 }
@@ -155,7 +156,7 @@ Inversion :: { Expr }
   | Factor                                       { $1 }
 
 Factor :: { Expr }
-  : var                                          { Var $1 }
+  : var                                          { if available $1 then Var $1 else error ("Parse error: \"" ++ $1 ++ "\" is a reserved name, and cannot be passed as a variable") }
   | int                                          { Int (read $1) }
   | bool                                         { Boolean ($1 == "true") }
   | stringLiteral                                { String (init . tail $ $1) }
@@ -168,6 +169,9 @@ OptNL
   |                                              {}
 
 {
+
+available :: String -> Bool
+available str = not $ str `elem` ["int", "str", "print", "length", "make", "spawn", "send", "recv"]
 
 parseError :: [Token] -> a
 parseError tokens = error

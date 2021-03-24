@@ -4,11 +4,40 @@
 
 module Language.TypeChecker where
 
-import Debug.Trace
+import Data.List (intercalate)
 import Language.Pretty (pretty)
 import Language.Syntax
+  ( Argument (..),
+    BinOp (..),
+    Block (..),
+    Expr (..),
+    OptType (..),
+    Stmt (..),
+    Stmts,
+    Type (..),
+    UnaOp (..),
+  )
+
+-- ["int", "str", "print", "length", "make", "spawn", "send", "recv"]
 
 type Env = [(String, OptType)]
+
+data BoolWithError
+  = Correct
+  | Incorrect OptType String
+  deriving (Eq)
+
+expect :: OptType -> OptType -> BoolWithError
+expect typ expected =
+  if typ == expected
+    then Correct
+    else Incorrect typ (pretty expected)
+
+expectBoth :: BoolWithError -> BoolWithError -> BoolWithError
+expectBoth x y =
+  case x of
+    Correct -> y
+    Incorrect _ _ -> x
 
 getEnv :: Stmts -> Env
 getEnv =
@@ -23,133 +52,146 @@ getFuncSignature args return = Type (FuncType (map (\(Arg _ argType) -> argType)
 typeCheck :: Stmts -> Stmts
 typeCheck stmts =
   let env = getEnv stmts
-   in if check stmts NoType env
-        then stmts
-        else error "Type check failed"
+   in case check stmts NoType env of
+        Correct -> stmts
+        Incorrect exp msg ->
+          error
+            ( "Type error: Expected "
+                ++ pretty exp
+                ++ ", got "
+                ++ msg
+            )
 
-class TypeChecker t0 t1 where
-  infer :: t0 -> Env -> t1
-  check :: t0 -> t1 -> Env -> Bool
+class TypeChecker t0 where
+  infer :: t0 -> Env -> OptType
+  check :: t0 -> OptType -> Env -> BoolWithError
 
-instance TypeChecker Stmts OptType where
-  check [] expected _ = expected == NoType
-  check ((Return expr) : _) expected env =
-    let exprType = infer expr env
-     in expected == exprType
+instance TypeChecker Stmts where
+  check [] expected _ = expect NoType expected
+  check ((Return expr) : _) expected env = check expr expected env
   check ((Let name exprType expr) : rest) expected env =
-    let inferred = infer expr env
-     in Type exprType == inferred
-          && check rest expected ((name, Type exprType) : env)
-  check ((Expr expr) : rest) expected env = check expr expected env && check rest expected env
+    expectBoth (check expr (Type exprType) env) (check rest expected ((name, Type exprType) : env))
+  check ((Expr expr) : rest) expected env =
+    expectBoth (check expr expected env) (check rest expected env)
   check ((FuncDef name args returnType block) : rest) expected env =
     let funcType = getFuncSignature args returnType
      in let env' = map (\(Arg argName argType) -> (argName, Type argType)) args ++ ((name, funcType) : env)
-         in check block returnType env' && check rest expected env'
-  check ((If expr block) : rest) expected env = trace "if"
-    infer expr env == Type BoolType && check rest expected env
-      && ( case block of
-             (Curly stmts) -> check (stmts ++ rest) expected env
-             (Inline expr) -> check (Expr expr : rest) expected env
-         )
+         in expectBoth (check block returnType env') (check rest expected env')
+  check ((If expr block) : rest) expected env =
+    expectBoth
+      (check expr (Type BoolType) env)
+      ( expectBoth
+          (check rest expected env)
+          ( case block of
+              (Curly stmts) -> check (stmts ++ rest) expected env
+              (Inline expr) -> check (Expr expr : rest) expected env
+          )
+      )
   check ((IfElse expr block1 block2) : rest) expected env =
-    infer expr env == Type BoolType
-      && ( case block1 of
-             (Curly stmts) -> check (stmts ++ rest) expected env
-             (Inline expr) -> check (Expr expr : rest) expected env
-         )
-      && ( case block2 of
-             (Curly stmts) -> check (stmts ++ rest) expected env
-             (Inline expr) -> check (Expr expr : rest) expected env
-         )
+    expectBoth
+      (check expr (Type BoolType) env)
+      ( expectBoth
+          ( case block1 of
+              (Curly stmts) -> check (stmts ++ rest) expected env
+              (Inline expr) -> check (Expr expr : rest) expected env
+          )
+          ( case block2 of
+              (Curly stmts) -> check (stmts ++ rest) expected env
+              (Inline expr) -> check (Expr expr : rest) expected env
+          )
+      )
   check ((IfElseIf expr block stmt) : rest) expected env =
-    infer expr env == Type BoolType && check (stmt : rest) expected env
-      && ( case block of
-             (Curly stmts) -> check (stmts ++ rest) expected env
-             (Inline expr) -> check (Expr expr : rest) expected env
-         )
+    expectBoth
+      (check expr (Type BoolType) env)
+      ( expectBoth
+          (check (stmt : rest) expected env)
+          ( case block of
+              (Curly stmts) -> check (stmts ++ rest) expected env
+              (Inline expr) -> check (Expr expr : rest) expected env
+          )
+      )
+
   infer _ _ = NoType
 
-instance TypeChecker Block OptType where
+instance TypeChecker Block where
   check (Inline expr) expected env = check [Expr expr] expected env
   check (Curly stmt) expected env = check stmt expected env
   infer (Inline expr) env = infer expr env
   infer _ _ = NoType
 
-instance TypeChecker Expr OptType where
-  check (Int _) expected _ = expected == Type IntType
-  check (String _) expected _ = expected == Type StringType
-  check (Boolean _) expected _ = expected == Type BoolType
+instance TypeChecker Expr where
+  check (Int _) expected _ = expect (Type IntType) expected
+  check (String _) expected _ = expect (Type StringType) expected
+  check (Boolean _) expected _ = expect (Type BoolType) expected
   check (Brack expr) expected env = check expr expected env
   check (UnaOp op expr) expected env =
-    let opTypes = infer op env :: [OptType]
-     in let exprType = infer expr env
-         in if exprType `elem` opTypes
-              then expected == exprType
-              else
-                error
-                  ( "Type mismatch: "
-                      ++ pretty op
-                      ++ " cannot be used on type "
-                      ++ pretty exprType
-                  )
+    expectBoth
+      (check op expected env)
+      (check expr expected env)
   check (BinOp op expr1 expr2) expected env =
-    let opTypes = infer op env :: [OptType]
-     in let expr1Type = infer expr1 env
-         in let expr2Type = infer expr2 env
-             in if expr1Type == expr2Type && expr1Type `elem` opTypes
-                  then expected == expr1Type
-                  else
-                    error
-                      ( "Type mismatch: " ++ pretty op
-                          ++ " cannot be used on "
-                          ++ pretty expr1Type
-                          ++ " and "
-                          ++ pretty expr2Type
-                      )
+    let exprType = infer expr1 env
+     in expectBoth
+          (check op exprType env)
+          (check expr2 exprType env)
   check (Var name) expected env = case lookup name env of
-    (Just type') -> expected == type'
+    (Just type') -> expect type' expected
     Nothing -> error ("Type error: \"" ++ name ++ "\" is undefined")
-  check (App name exprs) expected env = case lookup name env of
-    (Just (Type (FuncType argTypes returnType))) ->
-      if map (`infer` env) exprs == map Type argTypes
-        then expected == returnType
-        else error ("Type error: Invalid arguments given to \"" ++ name ++ "\" - " ++ show (map (`infer` env) exprs :: [OptType]))
-    (Just _) -> error ("Type error: \"" ++ name ++ "\" is not a function")
-    Nothing -> error ("Type error: \"" ++ name ++ "\" is undefined")
+  check (App name exprs) expected env = case name of
+    "str" ->
+      if length exprs == 1
+        then expect (Type StringType) expected
+        else error ("Type error: Invalid number of arguments given to \"" ++ name ++ "\"")
+    "int" ->
+      if length exprs == 1
+        then expect (Type IntType) expected
+        else error ("Type error: Invalid number of arguments given to \"" ++ name ++ "\"")
+    "print" ->
+      if length exprs == 1
+        then expect (Type IntType) expected
+        else error ("Type error: Invalid number of arguments given to \"" ++ name ++ "\"")
+    "length" ->
+      if map (`infer` env) exprs == [Type StringType]
+        then expect (Type IntType) expected
+        else error ("Type error: Invalid arguments given to \"" ++ name ++ "\" - " ++ intercalate ", " (map (\x -> pretty $ infer x env) exprs))
+    "make" -> error "Type error: channels created using \"make\" must have their types annotated using \"::\""
+    _ ->
+      case lookup name env of
+        (Just (Type (FuncType argTypes returnType))) ->
+          if map (`infer` env) exprs == map Type argTypes
+            then expect returnType expected
+            else error ("Type error: Invalid arguments given to \"" ++ name ++ "\" - " ++ intercalate ", " (map (\x -> pretty $ infer x env) exprs))
+        (Just _) -> error ("Type error: \"" ++ name ++ "\" is not a function")
+        Nothing -> error ("Type error: \"" ++ name ++ "\" is undefined")
   check (Enforce expr type') expected env =
-    if check expr (Type type') env
-      then expected == Type type'
-      else error ("Type error: " ++ pretty expr ++ " is meant to be of type " ++ pretty type' ++ ", but it is of type " ++ pretty (infer expr env :: OptType))
+    expectBoth
+      (check expr (Type type') env)
+      (expect (Type type') expected)
   infer (Int _) _ = Type IntType
   infer (String _) _ = Type StringType
   infer (Boolean _) _ = Type BoolType
   infer (Brack expr) env = infer expr env
   infer (UnaOp op expr) env =
-    let opTypes = infer op env :: [OptType]
-     in let exprType = infer expr env
-         in if exprType `elem` opTypes
-              then exprType
-              else
-                error
-                  ( "Type mismatch: "
-                      ++ pretty op
-                      ++ " cannot be used on type "
-                      ++ pretty exprType
-                  )
+    let exprType = infer expr env
+     in case check op exprType env of
+          Correct -> exprType
+          Incorrect exp msg ->
+            error
+              ( "Type error: Expected "
+                  ++ pretty exp
+                  ++ ", got "
+                  ++ msg
+              )
   infer (BinOp op expr1 expr2) env =
-    let opTypes = infer op env :: [OptType]
-     in let expr1Type = infer expr1 env
-         in let expr2Type = infer expr2 env
-             in if expr1Type == expr2Type && expr1Type `elem` opTypes
-                  then expr1Type
-                  else
-                    error
-                      ( "Type mismatch: " ++ pretty op
-                          ++ " cannot be used on "
-                          ++ pretty expr1Type
-                          ++ " and "
-                          ++ pretty expr2Type
-                      )
+    let exprType = infer expr1 env
+     in case expectBoth (check op exprType env) (check expr2 exprType env) of
+          Correct -> exprType
+          Incorrect exp msg ->
+            error
+              ( "Type error: Expected "
+                  ++ pretty exp
+                  ++ ", got "
+                  ++ msg
+              )
   infer (Var name) env = case lookup name env of
     (Just type') -> type'
     Nothing -> error ("Type error: \"" ++ name ++ "\" is undefined")
@@ -157,30 +199,55 @@ instance TypeChecker Expr OptType where
     (Just (Type (FuncType argTypes returnType))) ->
       if map (`infer` env) exprs == map Type argTypes
         then returnType
-        else error ("Type error: Invalid arguments given to \"" ++ name ++ "\" - " ++ show (map (`infer` env) exprs :: [OptType]))
+        else error ("Type error: Invalid arguments given to \"" ++ name ++ "\" - " ++ intercalate ", " (map (\x -> pretty $ infer x env) exprs))
     (Just _) -> error ("Type error: \"" ++ name ++ "\" is not a function")
     Nothing -> error ("Type error: \"" ++ name ++ "\" is undefined")
   infer (Enforce expr type') env =
-    if check expr (Type type') env
-      then Type type'
-      else error ("Type error: " ++ pretty expr ++ " is meant to be of type " ++ pretty type' ++ ", but it is of type " ++ pretty (infer expr env :: OptType))
+    case check expr (Type type') env of
+      Correct -> Type type'
+      Incorrect exp msg ->
+        error
+          ( "Type error: Expected "
+              ++ pretty exp
+              ++ ", got "
+              ++ msg
+          )
 
-instance TypeChecker UnaOp [OptType] where
-  infer Inv _ = [Type BoolType]
-  check _ _ _ = error "Cannot check operators"
+instance TypeChecker UnaOp where
+  infer Inv _ = Type BoolType
+  check Inv expected _ = expect (Type BoolType) expected
 
-instance TypeChecker BinOp [OptType] where
-  infer Equals _ = [Type BoolType, Type StringType, Type IntType]
-  infer NotEquals _ = [Type BoolType, Type StringType, Type IntType]
-  infer Or _ = [Type BoolType]
-  infer And _ = [Type BoolType]
-  infer Plus _ = [Type IntType]
-  infer Minus _ = [Type IntType]
-  infer Div _ = [Type IntType]
-  infer Times _ = [Type IntType]
-  infer GreaterThan _ = [Type IntType]
-  infer LessThan _ = [Type IntType]
-  infer GreaterEq _ = [Type IntType]
-  infer LessEq _ = [Type IntType]
-  infer Concat _ = [Type StringType]
-  check _ _ _ = error "Cannot check operators"
+instance TypeChecker BinOp where
+  infer Equals _ = error "Cannot infer type of Equals operator"
+  infer NotEquals _ = error "Cannot infer type of NotEquals operator"
+  infer Or _ = Type BoolType
+  infer And _ = Type BoolType
+  infer Plus _ = Type IntType
+  infer Minus _ = Type IntType
+  infer Div _ = Type IntType
+  infer Times _ = Type IntType
+  infer GreaterThan _ = Type IntType
+  infer LessThan _ = Type IntType
+  infer GreaterEq _ = Type IntType
+  infer LessEq _ = Type IntType
+  infer Concat _ = Type StringType
+  check Equals expected _ =
+    if expected `elem` [Type BoolType, Type StringType, Type IntType]
+      then Correct
+      else Incorrect expected "bool, string, int"
+  check NotEquals expected _ =
+    if expected `elem` [Type BoolType, Type StringType, Type IntType]
+      then Correct
+      else Incorrect expected "bool, string, int"
+  check Or (Type BoolType) _ = Correct
+  check And (Type BoolType) _ = Correct
+  check Plus (Type IntType) _ = Correct
+  check Minus (Type IntType) _ = Correct
+  check Div (Type IntType) _ = Correct
+  check Times (Type IntType) _ = Correct
+  check GreaterThan (Type IntType) _ = Correct
+  check LessThan (Type IntType) _ = Correct
+  check GreaterEq (Type IntType) _ = Correct
+  check LessEq (Type IntType) _ = Correct
+  check Concat (Type StringType) _ = Correct
+  check op expected _ = Incorrect expected (pretty (infer op []))

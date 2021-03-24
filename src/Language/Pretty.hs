@@ -1,7 +1,17 @@
 module Language.Pretty where
 
-import Data.List
+import Data.List (intercalate)
 import Language.Syntax
+  ( Argument (..),
+    BinOp (..),
+    Block (..),
+    Expr (..),
+    OptType (..),
+    Stmt (..),
+    Stmts,
+    Type (..),
+    UnaOp (..),
+  )
 
 prettys :: Stmts -> String
 prettys stmts = intercalate "\n" (map pretty stmts)
@@ -50,7 +60,7 @@ instance Pretty Type where
   pretty IntType = "int"
   pretty StringType = "string"
   pretty (FuncType argTypes returnType) =
-    "func (" ++ intercalate "," (map pretty argTypes) ++ ")"
+    "func " ++ intercalate "," (map pretty argTypes)
       ++ ( case returnType of
              NoType -> ""
              _ -> " -> " ++ pretty returnType

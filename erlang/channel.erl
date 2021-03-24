@@ -1,19 +1,17 @@
 -module(channel).
 
--export([channel/0, channel/1, send/2, recv/1, close/1]).
+-export([make/0, make/1, send/2, recv/1, close/1]).
 
-channel() -> spawn(channel, channel, [[]]).
+make() -> spawn(channel, make, [[]]).
 
-channel([]) ->
+make([]) ->
     receive
-      close -> closed;
-      {recv, PID} -> channel([PID])
+      {recv, PID} -> make([PID])
     end;
-channel([X|Xs]) ->
+make([X|Xs]) ->
     receive
-      close -> close;
-      {send, Msg} -> X ! {self(), Msg}, channel(Xs);
-      {recv, PID} -> channel([X|Xs] ++ [PID])
+      {send, Msg} -> X ! {self(), Msg}, make(Xs);
+      {recv, PID} -> make([X|Xs] ++ [PID])
     end.
 
 recv(Channel) ->
@@ -21,5 +19,3 @@ recv(Channel) ->
     receive {Channel, Msg} -> Msg end.
 
 send(Channel, Msg) -> Channel ! {send, Msg}.
-
-close(Channel) -> Channel ! close.

@@ -8,7 +8,7 @@ func main(x: int) -> int {
     return num + 2
   }
 
-  let renamed : func int -> int = plusone
+  let rename : func int -> int = plusone
 
-  return plusone(renamed(plustwo(x)))
+  return plusone(rename(plustwo(x,2)))
 }
