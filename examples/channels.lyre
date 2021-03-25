@@ -1,0 +1,16 @@
+func main() {
+  let chan: channel string = make() :: channel string
+  spawn(server, chan)
+  spawn(client, chan, "hello")
+  spawn(client, chan, "world")
+}
+
+func server(chan: channel string) {
+  let message: string = recv(chan)
+  print(message)
+  server(chan)
+}
+
+func client(chan: channel string, message: string) {
+  send(chan, message)
+}

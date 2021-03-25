@@ -24,20 +24,26 @@ type Env = [(String, OptType)]
 
 data BoolWithError
   = Correct
-  | Incorrect OptType String
+  | Incorrect String String
   deriving (Eq)
 
 expect :: OptType -> OptType -> BoolWithError
 expect typ expected =
   if typ == expected
     then Correct
-    else Incorrect typ (pretty expected)
+    else Incorrect (pretty typ) (pretty expected)
 
 expectBoth :: BoolWithError -> BoolWithError -> BoolWithError
 expectBoth x y =
   case x of
     Correct -> y
     Incorrect _ _ -> x
+
+expectAll :: BoolWithError -> BoolWithError -> BoolWithError -> BoolWithError
+expectAll x y z = expectBoth x (expectBoth y z)
+
+prettyExprTypes :: [Expr] -> Env -> String
+prettyExprTypes exprs env = intercalate ", " (map (\x -> pretty $ infer x env) exprs)
 
 getEnv :: Stmts -> Env
 getEnv =
@@ -57,7 +63,7 @@ typeCheck stmts =
         Incorrect exp msg ->
           error
             ( "Type error: Expected "
-                ++ pretty exp
+                ++ exp
                 ++ ", got "
                 ++ msg
             )
@@ -78,37 +84,31 @@ instance TypeChecker Stmts where
      in let env' = map (\(Arg argName argType) -> (argName, Type argType)) args ++ ((name, funcType) : env)
          in expectBoth (check block returnType env') (check rest expected env')
   check ((If expr block) : rest) expected env =
-    expectBoth
+    expectAll
       (check expr (Type BoolType) env)
-      ( expectBoth
-          (check rest expected env)
-          ( case block of
-              (Curly stmts) -> check (stmts ++ rest) expected env
-              (Inline expr) -> check (Expr expr : rest) expected env
-          )
+      (check rest expected env)
+      ( case block of
+          (Curly stmts) -> check (stmts ++ rest) expected env
+          (Inline expr) -> check (Expr expr : rest) expected env
       )
   check ((IfElse expr block1 block2) : rest) expected env =
-    expectBoth
+    expectAll
       (check expr (Type BoolType) env)
-      ( expectBoth
-          ( case block1 of
-              (Curly stmts) -> check (stmts ++ rest) expected env
-              (Inline expr) -> check (Expr expr : rest) expected env
-          )
-          ( case block2 of
-              (Curly stmts) -> check (stmts ++ rest) expected env
-              (Inline expr) -> check (Expr expr : rest) expected env
-          )
+      ( case block1 of
+          (Curly stmts) -> check (stmts ++ rest) expected env
+          (Inline expr) -> check (Expr expr : rest) expected env
+      )
+      ( case block2 of
+          (Curly stmts) -> check (stmts ++ rest) expected env
+          (Inline expr) -> check (Expr expr : rest) expected env
       )
   check ((IfElseIf expr block stmt) : rest) expected env =
-    expectBoth
+    expectAll
       (check expr (Type BoolType) env)
-      ( expectBoth
-          (check (stmt : rest) expected env)
-          ( case block of
-              (Curly stmts) -> check (stmts ++ rest) expected env
-              (Inline expr) -> check (Expr expr : rest) expected env
-          )
+      (check (stmt : rest) expected env)
+      ( case block of
+          (Curly stmts) -> check (stmts ++ rest) expected env
+          (Inline expr) -> check (Expr expr : rest) expected env
       )
 
   infer _ _ = NoType
@@ -140,19 +140,44 @@ instance TypeChecker Expr where
     "str" ->
       if length exprs == 1
         then expect (Type StringType) expected
-        else error ("Type error: Invalid number of arguments given to \"" ++ name ++ "\"")
+        else error "Type error: Invalid number of arguments given to \"str\""
     "int" ->
       if length exprs == 1
         then expect (Type IntType) expected
-        else error ("Type error: Invalid number of arguments given to \"" ++ name ++ "\"")
-    "print" ->
-      if length exprs == 1
-        then expect (Type IntType) expected
-        else error ("Type error: Invalid number of arguments given to \"" ++ name ++ "\"")
+        else error "Type error: Invalid number of arguments given to \"int\""
     "length" ->
       if map (`infer` env) exprs == [Type StringType]
         then expect (Type IntType) expected
-        else error ("Type error: Invalid arguments given to \"" ++ name ++ "\" - " ++ intercalate ", " (map (\x -> pretty $ infer x env) exprs))
+        else error ("Type error: Invalid arguments given to \"length\" - " ++ prettyExprTypes exprs env)
+    "print" ->
+      if length exprs == 1
+        then expect NoType expected
+        else error "Type error: Invalid number of arguments given to \"print\""
+    "spawn" ->
+      case exprs of
+        [] -> error "Type error: \"spawn\" must be given at least one argument"
+        (first : rest) ->
+          case infer first env of
+            (Type (FuncType argTypes NoType)) ->
+              if map (`infer` env) rest == map Type argTypes
+                then expect NoType expected
+                else error ("Type error: Invalid arguments given to \"spawn\" - " ++ prettyExprTypes exprs env)
+            _ -> error ("Type error: Invalid arguments given to \"spawn\" - " ++ prettyExprTypes exprs env)
+    "send" ->
+      case exprs of
+        [first, second] -> case infer first env of
+          (Type (ChannelType chanType)) ->
+            expectBoth
+              (expect (infer second env) (Type chanType))
+              (expect NoType expected)
+          _ -> Incorrect "channel" (prettyExprTypes exprs env)
+        _ -> Incorrect "channel" (prettyExprTypes exprs env)
+    "recv" -> case exprs of
+      [chan] -> case infer chan env of
+        (Type (ChannelType chanType)) ->
+          expect (Type chanType) expected
+        _ -> Incorrect "channel" (prettyExprTypes exprs env)
+      _ -> Incorrect "channel" (prettyExprTypes exprs env)
     "make" -> error "Type error: channels created using \"make\" must have their types annotated using \"::\""
     _ ->
       case lookup name env of
@@ -162,6 +187,10 @@ instance TypeChecker Expr where
             else error ("Type error: Invalid arguments given to \"" ++ name ++ "\" - " ++ intercalate ", " (map (\x -> pretty $ infer x env) exprs))
         (Just _) -> error ("Type error: \"" ++ name ++ "\" is not a function")
         Nothing -> error ("Type error: \"" ++ name ++ "\" is undefined")
+  check (Enforce (App "make" []) type') expected _ =
+    case type' of
+      (ChannelType _) -> expect (Type type') expected
+      _ -> Incorrect "channel" (pretty type')
   check (Enforce expr type') expected env =
     expectBoth
       (check expr (Type type') env)
@@ -177,7 +206,7 @@ instance TypeChecker Expr where
           Incorrect exp msg ->
             error
               ( "Type error: Expected "
-                  ++ pretty exp
+                  ++ exp
                   ++ ", got "
                   ++ msg
               )
@@ -188,7 +217,7 @@ instance TypeChecker Expr where
           Incorrect exp msg ->
             error
               ( "Type error: Expected "
-                  ++ pretty exp
+                  ++ exp
                   ++ ", got "
                   ++ msg
               )
@@ -208,7 +237,7 @@ instance TypeChecker Expr where
       Incorrect exp msg ->
         error
           ( "Type error: Expected "
-              ++ pretty exp
+              ++ exp
               ++ ", got "
               ++ msg
           )
@@ -234,11 +263,11 @@ instance TypeChecker BinOp where
   check Equals expected _ =
     if expected `elem` [Type BoolType, Type StringType, Type IntType]
       then Correct
-      else Incorrect expected "bool, string, int"
+      else Incorrect (pretty expected) "bool, string, int"
   check NotEquals expected _ =
     if expected `elem` [Type BoolType, Type StringType, Type IntType]
       then Correct
-      else Incorrect expected "bool, string, int"
+      else Incorrect (pretty expected) "bool, string, int"
   check Or (Type BoolType) _ = Correct
   check And (Type BoolType) _ = Correct
   check Plus (Type IntType) _ = Correct
@@ -250,4 +279,4 @@ instance TypeChecker BinOp where
   check GreaterEq (Type IntType) _ = Correct
   check LessEq (Type IntType) _ = Correct
   check Concat (Type StringType) _ = Correct
-  check op expected _ = Incorrect expected (pretty (infer op []))
+  check op expected _ = Incorrect (pretty expected) (pretty (infer op []))

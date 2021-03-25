@@ -1,0 +1,3 @@
+func main(name: string) {
+  print("Hello " ~ name)
+}

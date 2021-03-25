@@ -7,14 +7,14 @@
 module Language.Compiler where
 
 import Data.Char (ord)
--- import Debug.Trace (trace)
 import qualified Language.CoreErlang.Syntax as Erl
+import qualified Language.Standard as Standard
 import qualified Language.Syntax as Lyre
 import Prelude hiding (exp)
 
 type FuncSig = (String, Int)
 
-type Env = ([FuncSig], [(String, String)])
+type Env = (String, [FuncSig], [(String, String)])
 
 getFuncSig :: Lyre.Stmt -> FuncSig
 getFuncSig (Lyre.FuncDef name args _ _) = (name, length args)
@@ -30,12 +30,12 @@ getFuncs =
 
 compileModule :: String -> Lyre.Stmts -> Erl.Module
 compileModule name program =
-  let funcs = getFuncs program
+  let funcs = Standard.env ++ getFuncs program
    in Erl.Module
         (Erl.Atom name)
-        (map (\(fname, arity) -> Erl.Function (Erl.Atom fname, toInteger arity)) funcs)
+        (Standard.header ++ map (\(fname, arity) -> Erl.Function (Erl.Atom fname, toInteger arity)) funcs)
         [(Erl.Atom "file", constructFileName name)]
-        (map (`compile` (funcs, [])) program)
+        (Standard.funcs name ++ map (`compile` (name, funcs, [])) program)
 
 underscore :: String -> String
 underscore str = "_" ++ str
@@ -83,19 +83,19 @@ constructFileName str =
         ]
     )
 
-transformName :: String -> Env -> Either (Erl.Exp, Int) Erl.Exp
-transformName name (funcs, vars) = case lookup name funcs of
-  Just arity -> Left (Erl.Fun (Erl.Function (Erl.Atom name, toInteger arity)), arity)
+transformName :: String -> Env -> Erl.Exp
+transformName name (_, funcs, vars) = case lookup name funcs of
+  Just arity -> Erl.Fun (Erl.Function (Erl.Atom name, toInteger arity))
   Nothing -> case lookup name vars of
-    Just newName -> Right (Erl.Var newName)
+    Just newName -> Erl.Var newName
     Nothing -> error ("Function \"" ++ name ++ "\" not found")
 
 addVar :: String -> Env -> (String, Env)
-addVar name (funcs, vars) = case lookup name funcs of
+addVar name (moduleName, funcs, vars) = case lookup name funcs of
   Just _ -> error ("Name \"" ++ name ++ "\" already in use")
   Nothing -> case lookup name vars of
     Just _ -> error ("Name \"" ++ name ++ "\" already in use")
-    Nothing -> (underscore name, (funcs, (name, underscore name) : vars))
+    Nothing -> (underscore name, (moduleName, funcs, (name, underscore name) : vars))
 
 addArgs :: [Lyre.Argument] -> Env -> ([String], Env)
 addArgs [] env = ([], env)
@@ -151,6 +151,12 @@ instance Compiler Lyre.Stmts Erl.Exp where
                           (exp $ compile rest env)
                   )
               )
+          ),
+        Erl.Constr
+          ( Erl.Alt
+              (Erl.Pats [])
+              (Erl.Guard (expAtom "true"))
+              (exp $ compile rest env)
           )
       ]
   compile ((Lyre.IfElse expr block elseBlock) : rest) env =
@@ -226,7 +232,7 @@ instance Compiler Lyre.BinOp String where
   compile Lyre.GreaterThan _ = ">"
   compile Lyre.LessThan _ = "<"
   compile Lyre.GreaterEq _ = ">="
-  compile Lyre.LessEq _ = "<="
+  compile Lyre.LessEq _ = "=<"
   compile Lyre.NotEquals _ = "/="
   compile Lyre.Concat _ = "++"
 
@@ -244,23 +250,24 @@ instance Compiler Lyre.Expr Erl.Exp where
       [exp $ compile expr env]
   compile (Lyre.Int integer) _ = Erl.Lit (Erl.LInt (toInteger integer))
   compile (Lyre.Var name) env =
-    case transformName name env of
-      Left (func, _) -> func
-      Right var -> var
+    transformName name env
   compile (Lyre.Brack expr) env = compile expr env
+  compile (Lyre.App "spawn" ((Lyre.Var spawnee) : args)) (modName, funcs, vars) =
+    Erl.ModCall
+      ( Erl.Exp (Erl.Constr (Erl.Lit (Erl.LAtom (Erl.Atom "erlang")))),
+        Erl.Exp (Erl.Constr (Erl.Lit (Erl.LAtom (Erl.Atom "spawn"))))
+      )
+      [ Erl.Exp (Erl.Constr (Erl.Lit (Erl.LAtom (Erl.Atom modName)))),
+        Erl.Exp (Erl.Constr (Erl.Lit (Erl.LAtom (Erl.Atom spawnee)))),
+        exp $ constructList $ map (\x -> exp $ compile x (modName, funcs, vars)) args
+      ]
+  -- Erl.App
+  -- (exp (Erl.Fun (Erl.Function (Erl.Atom "str", 1))))
+  -- (map (\x -> exp $ compile x env) args)
   compile (Lyre.App name args) env =
-    let argLen = length args
-     in Erl.App
-          ( exp
-              ( case transformName name env of
-                  Left (func, arity) ->
-                    if argLen == arity
-                      then func
-                      else error "Function arity does not match"
-                  Right var -> var
-              )
-          )
-          (map (\x -> exp $ compile x env) args)
+    Erl.App
+      (exp $ transformName name env)
+      (map (\x -> exp $ compile x env) args)
   compile (Lyre.String literal) _ = stringToList literal
   compile (Lyre.Boolean boolean) _ = if boolean then atom "true" else atom "false"
   compile (Lyre.Enforce expr _) env = compile expr env

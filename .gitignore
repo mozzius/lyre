@@ -3,3 +3,4 @@
 build/
 *.core
 *.beam
+erl_crash.dump
