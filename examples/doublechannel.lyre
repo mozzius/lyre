@@ -1,0 +1,18 @@
+
+func client1(chan: channel channel int) {
+  let intChan: channel int = recv(chan)
+  let integer: int = recv(intChan)
+  print(integer)
+}
+
+func client2(chan: channel channel int) {
+  let intChan: channel int = make() :: channel int
+  send(chan, intChan)
+  send(intChan, 20)
+}
+
+func main() {
+  let chan: channel channel int = make() :: channel channel int
+  spawn(client1, chan)
+  spawn(client2, chan)
+}

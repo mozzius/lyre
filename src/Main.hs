@@ -66,9 +66,4 @@ erl path = do
   let name = takeBaseName path
   callCommand ("erlc +to_core " ++ path)
   file <- readFile (name -<.> "core")
-
-  putStrLn "===================="
-  putStrLn file
-  putStrLn "==== CoreErlang ===="
   print $ parseModule file
-  putStrLn "===================="

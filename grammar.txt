@@ -1,3 +1,6 @@
+// NOTE: VERY OUTDATED, NOT WHAT THE GRAMMER LOOKS LIKE
+// SEE src/Language/Parser.y
+
 base: statement+ 'eol'
 
 statement:

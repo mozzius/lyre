@@ -1,5 +1,5 @@
 func main() {
-  let chan: channel string = make() :: channel string
+  let chan = make() :: channel string
   spawn(server, chan)
   spawn(client, chan, "hello")
   spawn(client, chan, "world")

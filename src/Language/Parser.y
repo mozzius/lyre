@@ -82,19 +82,23 @@ Type :: { Type }
   | stringType                                   { StringType }
   | boolType                                     { BoolType }
   | channelType Type                             { ChannelType $2 }
-  | func TypeList OptType                        { FuncType $2 $3 }
+  | func TypeList OptReturnType                  { FuncType $2 $3 }
 
 TypeList :: { [Type] }
   : Type ',' TypeList                            { $1:$3 }
   | Type                                         { [$1] }
   |                                              { [] }
 
-OptType :: { OptType }
+OptReturnType :: { OptType }
   : '->' Type                                    { Type $2 }
   |                                              { NoType }
 
+OptType :: { OptType }
+  : ':' Type                                     { Type $2 }
+  |                                              { NoType }
+
 Assignment :: { Stmt }
-  : let var ':' Type '=' Expression              { if available $2 then  Let $2 $4 $6 else error ("Parse error: \"" ++ $2 ++ "\" is a reserved name") }
+  : let var OptType '=' Expression               { if available $2 then  Let $2 $3 $5 else error ("Parse error: \"" ++ $2 ++ "\" is a reserved name") }
 
 If :: { Stmt }
   : if '(' Expression ')' Block else If          { IfElseIf $3 $5 $7 }

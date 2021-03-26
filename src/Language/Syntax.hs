@@ -3,7 +3,7 @@ module Language.Syntax where
 type Stmts = [Stmt]
 
 data Stmt
-  = Let String Type Expr
+  = Let String OptType Expr
   | Return Expr
   | FuncDef String [Argument] OptType Block
   | If Expr Block

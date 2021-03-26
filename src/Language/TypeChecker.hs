@@ -75,8 +75,19 @@ class TypeChecker t0 where
 instance TypeChecker Stmts where
   check [] expected _ = expect NoType expected
   check ((Return expr) : _) expected env = check expr expected env
+  check ((Let name NoType expr) : rest) expected env =
+    let exprType = infer expr env
+     in case exprType of
+          NoType -> Incorrect "Any type" (pretty NoType)
+          _ -> check rest expected ((name, exprType) : env)
+  check ((Let name exprType (App "make" args)) : rest) expected env =
+    if null args
+      then case exprType of
+        NoType -> Incorrect "Any type" (pretty NoType)
+        (Type _) -> check rest expected ((name, exprType) : env)
+      else Incorrect "" (prettyExprTypes args env)
   check ((Let name exprType expr) : rest) expected env =
-    expectBoth (check expr (Type exprType) env) (check rest expected ((name, Type exprType) : env))
+    expectBoth (check expr exprType env) (check rest expected ((name, exprType) : env))
   check ((Expr expr) : rest) expected env =
     expectBoth (check expr expected env) (check rest expected env)
   check ((FuncDef name args returnType block) : rest) expected env =
@@ -138,11 +149,11 @@ instance TypeChecker Expr where
     Nothing -> error ("Type error: \"" ++ name ++ "\" is undefined")
   check (App name exprs) expected env = case name of
     "str" ->
-      if length exprs == 1
+      if length (map (`infer` env) exprs) == 1
         then expect (Type StringType) expected
         else error "Type error: Invalid number of arguments given to \"str\""
     "int" ->
-      if length exprs == 1
+      if length (map (`infer` env) exprs) == 1
         then expect (Type IntType) expected
         else error "Type error: Invalid number of arguments given to \"int\""
     "length" ->
@@ -150,7 +161,7 @@ instance TypeChecker Expr where
         then expect (Type IntType) expected
         else error ("Type error: Invalid arguments given to \"length\" - " ++ prettyExprTypes exprs env)
     "print" ->
-      if length exprs == 1
+      if length (map (`infer` env) exprs) == 1
         then expect NoType expected
         else error "Type error: Invalid number of arguments given to \"print\""
     "spawn" ->
@@ -178,7 +189,7 @@ instance TypeChecker Expr where
           expect (Type chanType) expected
         _ -> Incorrect "channel" (prettyExprTypes exprs env)
       _ -> Incorrect "channel" (prettyExprTypes exprs env)
-    "make" -> error "Type error: channels created using \"make\" must have their types annotated using \"::\""
+    "make" -> error "Type error: type annotation missing"
     _ ->
       case lookup name env of
         (Just (Type (FuncType argTypes returnType))) ->
@@ -224,13 +235,65 @@ instance TypeChecker Expr where
   infer (Var name) env = case lookup name env of
     (Just type') -> type'
     Nothing -> error ("Type error: \"" ++ name ++ "\" is undefined")
-  infer (App name exprs) env = case lookup name env of
-    (Just (Type (FuncType argTypes returnType))) ->
-      if map (`infer` env) exprs == map Type argTypes
-        then returnType
-        else error ("Type error: Invalid arguments given to \"" ++ name ++ "\" - " ++ intercalate ", " (map (\x -> pretty $ infer x env) exprs))
-    (Just _) -> error ("Type error: \"" ++ name ++ "\" is not a function")
-    Nothing -> error ("Type error: \"" ++ name ++ "\" is undefined")
+  infer (App name exprs) env = case name of
+    "str" ->
+      if length (map (`infer` env) exprs) == 1
+        then Type StringType
+        else error "Type error: Invalid number of arguments given to \"str\""
+    "int" ->
+      if length (map (`infer` env) exprs) == 1
+        then Type IntType
+        else error "Type error: Invalid number of arguments given to \"int\""
+    "length" ->
+      if map (`infer` env) exprs == [Type StringType]
+        then Type IntType
+        else error ("Type error: Invalid arguments given to \"length\" - " ++ prettyExprTypes exprs env)
+    "print" ->
+      if length (map (`infer` env) exprs) == 1
+        then NoType
+        else error "Type error: Invalid number of arguments given to \"print\""
+    "spawn" ->
+      case exprs of
+        [] -> error "Type error: \"spawn\" must be given at least one argument"
+        (first : rest) ->
+          case infer first env of
+            (Type (FuncType argTypes NoType)) ->
+              if map (`infer` env) rest == map Type argTypes
+                then NoType
+                else error ("Type error: Invalid arguments given to \"spawn\" - " ++ prettyExprTypes exprs env)
+            _ -> error ("Type error: Invalid arguments given to \"spawn\" - " ++ prettyExprTypes exprs env)
+    "send" ->
+      case exprs of
+        [first, second] -> case infer first env of
+          (Type (ChannelType chanType)) ->
+            if infer second env == Type chanType
+              then NoType
+              else error ("Type error: Invalid arguments given to \"send\" - " ++ prettyExprTypes exprs env)
+        _ -> error ("Type error: Invalid arguments given to \"send\" - " ++ prettyExprTypes exprs env)
+    "recv" -> case exprs of
+      [chan] -> case infer chan env of
+        (Type (ChannelType chanType)) ->
+          Type chanType
+        _ -> error ("Type error: Invalid arguments given to \"recv\" - " ++ prettyExprTypes exprs env)
+      _ -> error ("Type error: Invalid arguments given to \"recv\" - " ++ prettyExprTypes exprs env)
+    "make" -> error "Type error: type annotation missing"
+    _ -> case lookup name env of
+      (Just (Type (FuncType argTypes returnType))) ->
+        if map (`infer` env) exprs == map Type argTypes
+          then returnType
+          else error ("Type error: Invalid arguments given to \"" ++ name ++ "\" - " ++ prettyExprTypes exprs env)
+      (Just _) -> error ("Type error: \"" ++ name ++ "\" is not a function")
+      Nothing -> error ("Type error: \"" ++ name ++ "\" is undefined")
+  infer (Enforce (App "make" []) type') _ =
+    case type' of
+      (ChannelType _) -> Type type'
+      _ ->
+        error
+          ( "Type error: Expected "
+              ++ "channel"
+              ++ ", got "
+              ++ pretty type'
+          )
   infer (Enforce expr type') env =
     case check expr (Type type') env of
       Correct -> Type type'

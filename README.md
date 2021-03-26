@@ -1,3 +1,3 @@
 # Lyre
 
-a language
+A typed, functional, concurrent programming language
