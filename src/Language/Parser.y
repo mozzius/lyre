@@ -59,7 +59,7 @@ Program :: { Stmts }
 
 Block :: { Block }
   : Expression                                   { Inline $1 }
-  | '{' OptNL Statements '}'                     { Curly $3 }
+  | '{' OptNL OptStatements '}'                  { Curly $3 }
 
 OptStatements :: { Stmts }
   : Statements                                   { $1 }
@@ -153,7 +153,7 @@ Sum :: { Expr }
 Term :: { Expr }
   : Term '*' Factor                              { BinOp Times $1 $3 }
   | Term '/' Factor                              { BinOp Div $1 $3 }
-  | Factor                                       { $1 }
+  | Inversion                                    { $1 }
 
 Inversion :: { Expr }
   : '!' Inversion                                { UnaOp Inv $2 }
