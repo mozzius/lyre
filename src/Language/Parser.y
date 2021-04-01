@@ -98,7 +98,7 @@ OptType :: { OptType }
   |                                              { NoType }
 
 Assignment :: { Stmt }
-  : let var OptType '=' Expression               { if available $2 then  Let $2 $3 $5 else error ("Parse error: \"" ++ $2 ++ "\" is a reserved name") }
+  : let var OptType '=' Expression               { if available $2 then Let $2 $3 $5 else error ("Parse error: \"" ++ $2 ++ "\" is a reserved name") }
 
 If :: { Stmt }
   : if '(' Expression ')' Block else If          { IfElseIf $3 $5 $7 }
@@ -125,23 +125,23 @@ ExprList :: { [Expr] }
   | Expression                                   { [$1] }
 
 Expression :: { Expr }
-  : Expression '||' Expression                   { BinOp Or $1 $3 }
+  : Expression '||' Conjunction                   { BinOp Or $1 $3 }
   | Conjunction                                  { $1 }
 
 Conjunction :: { Expr }
-  : Conjunction '&&' Conjunction                 { BinOp And $1 $3 }
+  : Conjunction '&&' Equality                 { BinOp And $1 $3 }
   | Equality                                     { $1 }
 
 Equality :: { Expr }
-  : Equality '==' Equality                       { BinOp Equals $1 $3 }
-  | Equality '!=' Equality                       { BinOp NotEquals $1 $3 }
+  : Equality '==' Comparison                       { BinOp Equals $1 $3 }
+  | Equality '!=' Comparison                       { BinOp NotEquals $1 $3 }
   | Comparison                                   { $1 }
 
 Comparison :: { Expr }
-  : Equality '<' Equality                        { BinOp LessThan $1 $3 }
-  | Equality '<=' Equality                       { BinOp LessEq $1 $3 }
-  | Equality '>' Equality                        { BinOp GreaterThan $1 $3 }
-  | Equality '>=' Equality                       { BinOp GreaterEq $1 $3 }
+  : Comparison '<' Sum                        { BinOp LessThan $1 $3 }
+  | Comparison '<=' Sum                       { BinOp LessEq $1 $3 }
+  | Comparison '>' Sum                        { BinOp GreaterThan $1 $3 }
+  | Comparison '>=' Sum                       { BinOp GreaterEq $1 $3 }
   | Sum                                          { $1 }
 
 Sum :: { Expr }
@@ -151,8 +151,8 @@ Sum :: { Expr }
   | Term                                         { $1 }
 
 Term :: { Expr }
-  : Term '*' Factor                              { BinOp Times $1 $3 }
-  | Term '/' Factor                              { BinOp Div $1 $3 }
+  : Term '*' Inversion                              { BinOp Times $1 $3 }
+  | Term '/' Inversion                              { BinOp Div $1 $3 }
   | Inversion                                    { $1 }
 
 Inversion :: { Expr }
