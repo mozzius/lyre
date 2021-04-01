@@ -77,7 +77,8 @@ instance Pretty Expr where
   pretty (Var name) = name
   pretty (Brack exp) = "(" ++ pretty exp ++ ")"
   pretty (App name exps) =
-    name ++ "("
+    pretty name
+      ++ "("
       ++ intercalate ", " (map pretty exps)
       ++ ")"
 

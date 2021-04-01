@@ -252,7 +252,7 @@ instance Compiler Lyre.Expr Erl.Exp where
   compile (Lyre.Var name) env =
     transformName name env
   compile (Lyre.Brack expr) env = compile expr env
-  compile (Lyre.App "spawn" ((Lyre.Var spawnee) : args)) (modName, funcs, vars) =
+  compile (Lyre.App (Lyre.Var "spawn") ((Lyre.Var spawnee) : args)) (modName, funcs, vars) =
     Erl.ModCall
       ( Erl.Exp (Erl.Constr (Erl.Lit (Erl.LAtom (Erl.Atom "erlang")))),
         Erl.Exp (Erl.Constr (Erl.Lit (Erl.LAtom (Erl.Atom "spawn"))))
@@ -264,9 +264,9 @@ instance Compiler Lyre.Expr Erl.Exp where
   -- Erl.App
   -- (exp (Erl.Fun (Erl.Function (Erl.Atom "str", 1))))
   -- (map (\x -> exp $ compile x env) args)
-  compile (Lyre.App name args) env =
+  compile (Lyre.App expr args) env =
     Erl.App
-      (exp $ transformName name env)
+      (exp $ compile expr env)
       (map (\x -> exp $ compile x env) args)
   compile (Lyre.String literal) _ = stringToList literal
   compile (Lyre.Boolean boolean) _ = if boolean then atom "true" else atom "false"

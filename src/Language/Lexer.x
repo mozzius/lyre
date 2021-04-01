@@ -20,7 +20,6 @@ $upper         = [A-Z]
 $eol           = [\n]
 $alphanum      = [$alpha $digit]
 @sym           = $alpha($alphanum)*
-@application   = $alpha($alphanum)*\(
 @int           = \-? $digit+
 @charLiteral   = \' ([\\.]|[^\']| . ) \'
 @stringLiteral = \"(\\.|[^\"]|\n)*\"
@@ -49,7 +48,6 @@ tokens :-
   @int				                  { \p s -> TokenInt p s }
   @stringLiteral                { \p s -> TokenStringLiteral p s }
   \\                            { \p _ -> TokenDiv p }
-  @application                  { \p s -> TokenApp p s }
   \(                            { \p _ -> TokenLParen p }
   \)                            { \p _ -> TokenRParen p }
   \{                            { \p _ -> TokenLCurly p }
@@ -95,7 +93,6 @@ data Token
   | TokenDiv           AlexPosn
   | TokenVar           AlexPosn String
   | TokenInt           AlexPosn String
-  | TokenApp           AlexPosn String
   | TokenMinus         AlexPosn
   | TokenLCurly        AlexPosn
   | TokenRCurly        AlexPosn
@@ -155,7 +152,6 @@ getPos (TokenFunc          (AlexPn _ line col)  ) = ("Func",        line, col)
 getPos (TokenNot           (AlexPn _ line col)  ) = ("Not",         line, col)
 getPos (TokenReturn        (AlexPn _ line col)  ) = ("Return",      line, col)
 getPos (TokenComma         (AlexPn _ line col)  ) = (",",           line, col)
-getPos (TokenApp           (AlexPn _ line col) _) = ("Application", line, col)
 getPos (TokenStringLiteral (AlexPn _ line col) _) = ("StringLit",   line, col)
 getPos (TokenIf            (AlexPn _ line col)  ) = ("If",          line, col)
 getPos (TokenElse          (AlexPn _ line col)  ) = ("Else",        line, col)

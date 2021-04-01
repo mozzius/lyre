@@ -44,7 +44,7 @@ data Expr
   | Var String
   | Brack Expr
   | Boolean Bool
-  | App String [Expr]
+  | App Expr [Expr]
   | Enforce Expr Type
   deriving (Show)
 

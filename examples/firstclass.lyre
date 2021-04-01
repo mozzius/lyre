@@ -1,0 +1,11 @@
+func test(): func -> string {
+  func hello(): string {
+    return "hello"
+  }
+
+  return hello
+}
+
+func main() {
+  print(test()())
+}
