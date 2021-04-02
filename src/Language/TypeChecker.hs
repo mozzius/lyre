@@ -31,7 +31,7 @@ expect :: OptType -> OptType -> BoolWithError
 expect typ expected =
   if typ == expected
     then Correct
-    else Incorrect (pretty typ) (pretty expected)
+    else Incorrect (pretty expected) (pretty typ)
 
 expectBoth :: BoolWithError -> BoolWithError -> BoolWithError
 expectBoth x y =
@@ -73,62 +73,125 @@ class TypeChecker t0 where
   check :: t0 -> OptType -> Env -> BoolWithError
 
 instance TypeChecker Stmts where
-  check [] expected _ = expect NoType expected
-  check ((Return expr) : _) expected env = check expr expected env
-  check ((Let name NoType expr) : rest) expected env =
+  infer [] _ = NoType
+  infer ((Return expr) : _) env = infer expr env
+  infer ((Let name NoType expr) : rest) env =
     let exprType = infer expr env
      in case exprType of
-          NoType -> Incorrect "Any type" (pretty NoType)
-          _ -> check rest expected ((name, exprType) : env)
-  check ((Let name exprType (App (Var "make") args)) : rest) expected env =
+          NoType -> error ("Type error: cannot assign nothing to \"" ++ name ++ "\"")
+          _ -> infer rest ((name, exprType) : env)
+  infer ((Let name exprType (App (Var "make") args)) : rest) env =
     if null args
       then case exprType of
-        NoType -> Incorrect "Any type" (pretty NoType)
-        (Type (ChannelType _)) -> check rest expected ((name, exprType) : env)
-      else Incorrect "" (prettyExprTypes args env)
-  check ((Let name exprType expr) : rest) expected env =
-    expectBoth (check expr exprType env) (check rest expected ((name, exprType) : env))
-  check ((Expr expr) : rest) expected env =
-    expectBoth (check expr expected env) (check rest expected env)
-  check ((FuncDef name args returnType block) : rest) expected env =
+        NoType -> error ("Type error: \"make\" has no type annotation when assigning to \"" ++ name ++ "\"")
+        (Type (ChannelType _)) -> infer rest ((name, exprType) : env)
+      else error ("Type error: Invalid arguments given to \"make\" - expecting none, got " ++ prettyExprTypes args env)
+  infer ((Let name exprType expr) : rest) env =
+    case check expr exprType env of
+      Correct -> infer rest ((name, exprType) : env)
+      Incorrect exp msg ->
+        error
+          ( "Type error: Expected "
+              ++ exp
+              ++ ", got "
+              ++ msg
+          )
+  infer ((Expr expr) : rest) env =
+    let _ = infer expr env -- discard value, but check it's valid
+     in infer rest env
+  infer ((FuncDef name args returnType block) : rest) env =
     let funcType = getFuncSignature args returnType
      in let env' = map (\(Arg argName argType) -> (argName, Type argType)) args ++ ((name, funcType) : env)
-         in expectBoth (check block returnType env') (check rest expected env')
-  check ((If expr block) : rest) expected env =
-    expectAll
-      (check expr (Type BoolType) env)
-      (check rest expected env)
-      ( case block of
-          (Curly stmts) -> check (stmts ++ rest) expected env
-          (Inline expr) -> check (Expr expr : rest) expected env
-      )
-  check ((IfElse expr block1 block2) : rest) expected env =
-    expectAll
-      (check expr (Type BoolType) env)
-      ( case block1 of
-          (Curly stmts) -> check (stmts ++ rest) expected env
-          (Inline expr) -> check (Expr expr : rest) expected env
-      )
-      ( case block2 of
-          (Curly stmts) -> check (stmts ++ rest) expected env
-          (Inline expr) -> check (Expr expr : rest) expected env
-      )
-  check ((IfElseIf expr block stmt) : rest) expected env =
-    expectAll
-      (check expr (Type BoolType) env)
-      (check (stmt : rest) expected env)
-      ( case block of
-          (Curly stmts) -> check (stmts ++ rest) expected env
-          (Inline expr) -> check (Expr expr : rest) expected env
-      )
-
-  infer _ _ = NoType
+         in case check block returnType env' of
+              Correct -> infer rest ((name, funcType) : env)
+              Incorrect exp msg ->
+                error
+                  ( "Type error: Expected "
+                      ++ exp
+                      ++ ", got "
+                      ++ msg
+                  )
+  infer ((If expr block) : rest) env =
+    case check expr (Type BoolType) env of
+      Correct ->
+        let type' = infer rest env
+         in case ( case block of
+                     (Curly stmts) -> check (stmts ++ rest) type' env
+                     (Inline expr) -> check (Expr expr : rest) type' env
+                 ) of
+              Correct -> type'
+              Incorrect exp msg ->
+                error
+                  ( "Type error: Expected "
+                      ++ exp
+                      ++ ", got "
+                      ++ msg
+                  )
+      Incorrect exp msg ->
+        error
+          ( "Type error: Expected "
+              ++ exp
+              ++ ", got "
+              ++ msg
+          )
+  infer ((IfElse expr block1 block2) : rest) env =
+    case check expr (Type BoolType) env of
+      Correct ->
+        let type' =
+              ( case block1 of
+                  (Curly stmts) -> infer (stmts ++ rest) env
+                  (Inline expr) -> infer (Expr expr : rest) env
+              )
+         in case ( case block2 of
+                     (Curly stmts) -> check (stmts ++ rest) type' env
+                     (Inline expr) -> check (Expr expr : rest) type' env
+                 ) of
+              Correct -> type'
+              Incorrect exp msg ->
+                error
+                  ( "Type error: Expected "
+                      ++ exp
+                      ++ ", got "
+                      ++ msg
+                  )
+      Incorrect exp msg ->
+        error
+          ( "Type error: Expected "
+              ++ exp
+              ++ ", got "
+              ++ msg
+          )
+  infer ((IfElseIf expr block stmt) : rest) env =
+    case check expr (Type BoolType) env of
+      Correct ->
+        let type' =
+              ( case block of
+                  (Curly stmts) -> infer (stmts ++ rest) env
+                  (Inline expr) -> infer (Expr expr : rest) env
+              )
+         in case check (stmt : rest) type' env of
+              Correct -> type'
+              Incorrect exp msg ->
+                error
+                  ( "Type error: Expected "
+                      ++ exp
+                      ++ ", got "
+                      ++ msg
+                  )
+      Incorrect exp msg ->
+        error
+          ( "Type error: Expected "
+              ++ exp
+              ++ ", got "
+              ++ msg
+          )
+  check stmts expected env = expect (infer stmts env) expected
 
 instance TypeChecker Block where
-  check (Inline expr) expected env = check [Expr expr] expected env
-  check (Curly stmt) expected env = check stmt expected env
   infer (Inline expr) env = infer expr env
-  infer _ _ = NoType
+  infer (Curly stmts) env = infer stmts env
+  check (Inline expr) expected env = check expr expected env
+  check (Curly stmts) expected env = check stmts expected env
 
 instance TypeChecker Expr where
   check (Int _) expected _ = expect (Type IntType) expected
