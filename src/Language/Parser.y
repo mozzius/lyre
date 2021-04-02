@@ -165,7 +165,7 @@ Factor :: { Expr }
   | stringLiteral                               { String (init . tail $ $1) }
   | '(' Expression ')'                          { Brack $2 }
   | Expression '(' OptExprList ')'              { App $1 $3 }
-  | Expression '::' Type                        { Enforce $1 $3}
+  | Expression '::' Type                        { Assert $1 $3}
 
 OptNL
   : OptNL nl                                    {}

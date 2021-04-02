@@ -256,11 +256,11 @@ instance TypeChecker Expr where
           then expect returnType expected
           else error ("Type error: Invalid arguments given to \"" ++ pretty expr ++ "\" - " ++ intercalate ", " (map (\x -> pretty $ infer x env) exprs))
       _ -> error ("Type error: \"" ++ pretty expr ++ "\" is not a function")
-  check (Enforce (App (Var "make") []) type') expected _ =
+  check (Assert (App (Var "make") []) type') expected _ =
     case type' of
       (ChannelType _) -> expect (Type type') expected
       _ -> Incorrect "channel" (pretty type')
-  check (Enforce expr type') expected env =
+  check (Assert expr type') expected env =
     expectBoth
       (check expr (Type type') env)
       (expect (Type type') expected)
@@ -343,7 +343,7 @@ instance TypeChecker Expr where
           then returnType
           else error ("Type error: Invalid arguments given to \"" ++ pretty expr ++ "\" - " ++ prettyExprTypes exprs env)
       _ -> error ("Type error: \"" ++ pretty expr ++ "\" is not a function")
-  infer (Enforce (App (Var "make") []) type') _ =
+  infer (Assert (App (Var "make") []) type') _ =
     case type' of
       (ChannelType _) -> Type type'
       _ ->
@@ -353,7 +353,7 @@ instance TypeChecker Expr where
               ++ ", got "
               ++ pretty type'
           )
-  infer (Enforce expr type') env =
+  infer (Assert expr type') env =
     case check expr (Type type') env of
       Correct -> Type type'
       Incorrect exp msg ->

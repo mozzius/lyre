@@ -45,7 +45,7 @@ data Expr
   | Brack Expr
   | Boolean Bool
   | App Expr [Expr]
-  | Enforce Expr Type
+  | Assert Expr Type
   deriving (Show)
 
 data Block

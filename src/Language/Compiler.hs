@@ -264,7 +264,7 @@ instance Compiler Lyre.Expr Erl.Exp where
       (map (\x -> exp $ compile x env) args)
   compile (Lyre.String literal) _ = stringToList literal
   compile (Lyre.Boolean boolean) _ = if boolean then atom "true" else atom "false"
-  compile (Lyre.Enforce expr _) env = compile expr env
+  compile (Lyre.Assert expr _) env = compile expr env
 
 instance Compiler Lyre.Block Erl.Exps where
   compile (Lyre.Curly stmts) env = exp $ compile stmts env
