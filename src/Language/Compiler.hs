@@ -83,13 +83,6 @@ constructFileName str =
         ]
     )
 
-transformName :: String -> Env -> Erl.Exp
-transformName name (_, funcs, vars) = case lookup name funcs of
-  Just arity -> Erl.Fun (Erl.Function (Erl.Atom name, toInteger arity))
-  Nothing -> case lookup name vars of
-    Just newName -> Erl.Var newName
-    Nothing -> error ("Function \"" ++ name ++ "\" not found")
-
 addVar :: String -> Env -> (String, Env)
 addVar name (moduleName, funcs, vars) = case lookup name funcs of
   Just _ -> error ("Name \"" ++ name ++ "\" already in use")
@@ -249,8 +242,12 @@ instance Compiler Lyre.Expr Erl.Exp where
       (compile operator env)
       [exp $ compile expr env]
   compile (Lyre.Int integer) _ = Erl.Lit (Erl.LInt (toInteger integer))
-  compile (Lyre.Var name) env =
-    transformName name env
+  compile (Lyre.Var name) (_, funcs, vars) =
+    case lookup name funcs of
+      Just arity -> Erl.Fun (Erl.Function (Erl.Atom name, toInteger arity))
+      Nothing -> case lookup name vars of
+        Just newName -> Erl.Var newName
+        Nothing -> error ("Variable \"" ++ name ++ "\" not found")
   compile (Lyre.Brack expr) env = compile expr env
   compile (Lyre.App (Lyre.Var "spawn") ((Lyre.Var spawnee) : args)) (modName, funcs, vars) =
     Erl.ModCall
@@ -261,9 +258,6 @@ instance Compiler Lyre.Expr Erl.Exp where
         Erl.Exp (Erl.Constr (Erl.Lit (Erl.LAtom (Erl.Atom spawnee)))),
         exp $ constructList $ map (\x -> exp $ compile x (modName, funcs, vars)) args
       ]
-  -- Erl.App
-  -- (exp (Erl.Fun (Erl.Function (Erl.Atom "str", 1))))
-  -- (map (\x -> exp $ compile x env) args)
   compile (Lyre.App expr args) env =
     Erl.App
       (exp $ compile expr env)
