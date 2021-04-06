@@ -1,0 +1,24 @@
+func main(digits: int) {
+  let worker: channel string = make()
+  stream()
+}
+
+func stream(Q: int, R: int, T: int, K: int, P: int, N: int, chan: channel string) {
+  let Q3R = (3 * Q) + R
+  let Y = Q3R / T
+  if (Y == (Q3R + Q) / T) {
+    let PNext = P + 1
+    send(chan, str())
+    stream(10 * Q, 10 * (R - Y * T), T, K, PNext, N, chan)
+  } else {
+    let K2 = 2 * K
+    let K21 = K2 + 1
+    stream(Q * K, (Q * ((2 * K2) + 2)) + R * K21, T * K21, K + 1, P, N, chan)
+  }
+}
+
+func printer(chan: channel string) {
+  let output = recv(chan)
+  print(output)
+  printer()
+}

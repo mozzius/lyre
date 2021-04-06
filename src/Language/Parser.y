@@ -182,7 +182,7 @@ parseError tokens = error
     in "Parse error: unexpected " ++ token
       ++ " at line " ++ show line
       ++ ", column " ++ show col
-      ++ "\n" ++ concat (map (\t -> show t ++ "\n") tokens)
+--    ++ "\n" ++ concat (map (\t -> show t ++ "\n") tokens)
 parseError [] = error "No tokens found"
 
 parse :: String -> Stmts

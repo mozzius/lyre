@@ -47,7 +47,7 @@ tokens :-
   @sym				                  { \p s -> TokenVar p s }
   @int				                  { \p s -> TokenInt p s }
   @stringLiteral                { \p s -> TokenStringLiteral p s }
-  \\                            { \p _ -> TokenDiv p }
+  \/                            { \p _ -> TokenDiv p }
   \(                            { \p _ -> TokenLParen p }
   \)                            { \p _ -> TokenRParen p }
   \{                            { \p _ -> TokenLCurly p }
