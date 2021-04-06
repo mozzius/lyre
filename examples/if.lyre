@@ -1,0 +1,11 @@
+
+func main(num: int) {
+  if (num > 20) {
+    print("greater than 20")
+  } else if (num > 10) {
+    print("greater than 10")
+  } else {
+    print("less than 10")
+  }
+  print("done!")
+}
