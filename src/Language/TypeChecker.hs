@@ -223,9 +223,9 @@ instance TypeChecker Expr where
       then expect (Type IntType) expected
       else error ("Type error: Invalid arguments given to \"length\" - " ++ prettyExprTypes exprs env)
   check (App (Var "print") exprs) expected env =
-    if length (map (`infer` env) exprs) == 1
+    if map (`infer` env) exprs == [Type StringType]
       then expect NoType expected
-      else error "Type error: Invalid number of arguments given to \"print\""
+      else error ("Type error: Invalid arguments given to \"print\" - " ++ prettyExprTypes exprs env)
   check (App (Var "spawn") []) expected env = error "Type error: \"spawn\" must be given at least one argument"
   check (App (Var "spawn") (first : rest)) expected env =
     case infer first env of
@@ -306,9 +306,9 @@ instance TypeChecker Expr where
       then Type IntType
       else error ("Type error: Invalid arguments given to \"length\" - " ++ prettyExprTypes exprs env)
   infer (App (Var "print") exprs) env =
-    if length (map (`infer` env) exprs) == 1
+    if map (`infer` env) exprs == [Type StringType]
       then NoType
-      else error "Type error: Invalid number of arguments given to \"print\""
+      else error ("Type error: Invalid arguments given to \"print\" - " ++ prettyExprTypes exprs env)
   infer (App (Var "spawn") exprs) env =
     case exprs of
       [] -> error "Type error: \"spawn\" must be given at least one argument"

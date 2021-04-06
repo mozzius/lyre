@@ -2,23 +2,23 @@
 
 -export([int/1, length/1, print/1, str/1, make/0, make/1, recv/1, send/2]).
 
-% func (x: any) -> string
+% func any -> string
 str(true) -> "true";
 str(false) -> "false";
 str(N) when is_integer(N) -> integer_to_list(N);
 str(S) -> S.
 
-% func (x: any) -> int
+% func any -> int
 int(true) -> "true";
 int(false) -> "false";
 int(N) when is_list(N) -> list_to_integer(N);
 int(S) -> S.
 
-% func (x: string) -> int
+% func string -> int
 length(X) -> list:length(X).
 
-% func (x: any)
-print(S) -> io:printf("~p~n", [S]).
+% func string
+print(S) -> io:fwrite("~s~n", [S]).
 
 make() -> spawn(standard, make, [[]]).
 
