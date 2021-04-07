@@ -80,12 +80,6 @@ instance TypeChecker Stmts where
      in case exprType of
           NoType -> error ("Type error: cannot assign nothing to \"" ++ name ++ "\"")
           _ -> infer rest ((name, exprType) : env)
-  infer ((Let name exprType (App (Var "make") args)) : rest) env =
-    if null args
-      then case exprType of
-        NoType -> error ("Type error: \"make\" has no type annotation when assigning to \"" ++ name ++ "\"")
-        (Type (ChannelType _)) -> infer rest ((name, exprType) : env)
-      else error ("Type error: Invalid arguments given to \"make\" - expecting none, got " ++ prettyExprTypes args env)
   infer ((Let name exprType expr) : rest) env =
     case check expr exprType env of
       Correct -> infer rest ((name, exprType) : env)
@@ -248,7 +242,13 @@ instance TypeChecker Expr where
         expect (Type chanType) expected
       _ -> Incorrect "channel" (prettyExprTypes exprs env)
     _ -> Incorrect "channel" (prettyExprTypes exprs env)
-  check (App (Var "make") _) _ _ = error "Type error: type annotation missing"
+  check (App (Var "make") exprs) expected env = case exprs of
+    [] ->
+      ( case expected of
+          (Type (ChannelType _)) -> Correct
+          _ -> Incorrect "channel" (pretty expected)
+      )
+    _ -> Incorrect "none" (prettyExprTypes exprs env)
   check (App expr exprs) expected env =
     case infer expr env of
       (Type (FuncType argTypes returnType)) ->
@@ -256,10 +256,6 @@ instance TypeChecker Expr where
           then expect returnType expected
           else error ("Type error: Invalid arguments given to \"" ++ pretty expr ++ "\" - " ++ intercalate ", " (map (\x -> pretty $ infer x env) exprs))
       _ -> error ("Type error: \"" ++ pretty expr ++ "\" is not a function")
-  check (Assert (App (Var "make") []) type') expected _ =
-    case type' of
-      (ChannelType _) -> expect (Type type') expected
-      _ -> Incorrect "channel" (pretty type')
   check (Assert expr type') expected env =
     expectBoth
       (check expr (Type type') env)
@@ -335,7 +331,7 @@ instance TypeChecker Expr where
         _ -> error ("Type error: Invalid arguments given to \"recv\" - " ++ prettyExprTypes exprs env)
       _ -> error ("Type error: Invalid arguments given to \"recv\" - " ++ prettyExprTypes exprs env)
   infer (App (Var "make") exprs) env =
-    error "Type error: type annotation missing"
+    error "Type error: Cannot infer the type of \"make\" - type annotation missing"
   infer (App expr exprs) env =
     case infer expr env of
       (Type (FuncType argTypes returnType)) ->
@@ -343,16 +339,6 @@ instance TypeChecker Expr where
           then returnType
           else error ("Type error: Invalid arguments given to \"" ++ pretty expr ++ "\" - " ++ prettyExprTypes exprs env)
       _ -> error ("Type error: \"" ++ pretty expr ++ "\" is not a function")
-  infer (Assert (App (Var "make") []) type') _ =
-    case type' of
-      (ChannelType _) -> Type type'
-      _ ->
-        error
-          ( "Type error: Expected "
-              ++ "channel"
-              ++ ", got "
-              ++ pretty type'
-          )
   infer (Assert expr type') env =
     case check expr (Type type') env of
       Correct -> Type type'
