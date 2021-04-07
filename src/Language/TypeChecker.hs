@@ -91,8 +91,7 @@ instance TypeChecker Stmts where
               ++ msg
           )
   infer ((Expr expr) : rest) env =
-    let _ = infer expr env -- discard value, but check it's valid
-     in infer rest env
+    infer expr env `seq` infer rest env
   infer ((FuncDef name args returnType block) : rest) env =
     let funcType = getFuncSignature args returnType
      in let env' = map (\(Arg argName argType) -> (argName, Type argType)) args ++ ((name, funcType) : env)
