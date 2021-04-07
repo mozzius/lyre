@@ -1,0 +1,12 @@
+func plusone(chan: channel int) {
+  let x = recv(chan)
+  x + 1
+  plusone(chan)
+}
+
+func main() {
+  let chan: channel int = make()
+  spawn(plusone, chan)
+  send(chan, 1)
+  send(chan, "1")
+}

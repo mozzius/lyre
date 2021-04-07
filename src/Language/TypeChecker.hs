@@ -5,6 +5,7 @@
 module Language.TypeChecker where
 
 import Data.List (intercalate)
+import Debug.Trace (trace)
 import Language.Pretty (pretty)
 import Language.Syntax
   ( Argument (..),
@@ -53,7 +54,12 @@ getEnv =
     )
 
 getFuncSignature :: [Argument] -> OptType -> OptType
-getFuncSignature args return = Type (FuncType (map (\(Arg _ argType) -> argType) args) return)
+getFuncSignature args return =
+  Type
+    ( FuncType
+        (map (\(Arg _ argType) -> argType) args)
+        return
+    )
 
 typeCheck :: Stmts -> Stmts
 typeCheck stmts =
@@ -80,12 +86,12 @@ instance TypeChecker Stmts where
      in case exprType of
           NoType -> error ("Type error: cannot assign nothing to \"" ++ name ++ "\"")
           _ -> infer rest ((name, exprType) : env)
-  infer ((Let name exprType (App (Var "make") args)) : rest) env =
-    if null args
+  infer ((Let name exprType (App (Var "make") exprs)) : rest) env =
+    if map (`infer` env) exprs == [Type IntType]
       then case exprType of
         NoType -> error ("Type error: \"make\" has no type annotation when assigning to \"" ++ name ++ "\"")
         (Type (ChannelType _)) -> infer rest ((name, exprType) : env)
-      else error ("Type error: Invalid arguments given to \"make\" - expecting none, got " ++ prettyExprTypes args env)
+      else error ("Type error: Invalid arguments given to \"make\" - " ++ prettyExprTypes exprs env)
   infer ((Let name exprType expr) : rest) env =
     case check expr exprType env of
       Correct -> infer rest ((name, exprType) : env)
@@ -97,8 +103,7 @@ instance TypeChecker Stmts where
               ++ msg
           )
   infer ((Expr expr) : rest) env =
-    let _ = infer expr env -- discard value, but check it's valid
-     in infer rest env
+    infer expr env `seq` infer rest env
   infer ((FuncDef name args returnType block) : rest) env =
     let funcType = getFuncSignature args returnType
      in let env' = map (\(Arg argName argType) -> (argName, Type argType)) args ++ ((name, funcType) : env)
@@ -185,6 +190,7 @@ instance TypeChecker Stmts where
               ++ ", got "
               ++ msg
           )
+  check (Return expr : _) expected env = expect (infer expr env) expected
   check stmts expected env = expect (infer stmts env) expected
 
 instance TypeChecker Block where
@@ -256,10 +262,12 @@ instance TypeChecker Expr where
           then expect returnType expected
           else error ("Type error: Invalid arguments given to \"" ++ pretty expr ++ "\" - " ++ intercalate ", " (map (\x -> pretty $ infer x env) exprs))
       _ -> error ("Type error: \"" ++ pretty expr ++ "\" is not a function")
-  check (Assert (App (Var "make") []) type') expected _ =
-    case type' of
-      (ChannelType _) -> expect (Type type') expected
-      _ -> Incorrect "channel" (pretty type')
+  check (Assert (App (Var "make") exprs) type') expected env =
+    if map (`infer` env) exprs == [Type IntType]
+      then case type' of
+        (ChannelType _) -> expect (Type type') expected
+        _ -> Incorrect "channel" (pretty type')
+      else Incorrect "int" (intercalate ", " (map (\x -> pretty $ infer x env) exprs))
   check (Assert expr type') expected env =
     expectBoth
       (check expr (Type type') env)
@@ -343,15 +351,23 @@ instance TypeChecker Expr where
           then returnType
           else error ("Type error: Invalid arguments given to \"" ++ pretty expr ++ "\" - " ++ prettyExprTypes exprs env)
       _ -> error ("Type error: \"" ++ pretty expr ++ "\" is not a function")
-  infer (Assert (App (Var "make") []) type') _ =
-    case type' of
-      (ChannelType _) -> Type type'
-      _ ->
+  infer (Assert (App (Var "make") exprs) type') env =
+    if map (`infer` env) exprs == [Type IntType]
+      then case type' of
+        (ChannelType _) -> Type type'
+        _ ->
+          error
+            ( "Type error: Expected "
+                ++ "channel"
+                ++ ", got "
+                ++ pretty type'
+            )
+      else
         error
-          ( "Type error: Expected "
-              ++ "channel"
+          ( "Type error: Expected ++"
+              ++ "int"
               ++ ", got "
-              ++ pretty type'
+              ++ intercalate ", " (map (\x -> pretty $ infer x env) exprs)
           )
   infer (Assert expr type') env =
     case check expr (Type type') env of

@@ -1,8 +1,8 @@
 -module(test2).
 
--export([addone/0, main/0]).
+-export([plusone/0, main/0]).
 
-addone() -> receive X -> X + 1, addone() end.
+plusone() -> receive X -> X + 1, plusone() end.
 
 main() ->
-    PID = spawn(test2, addone, []), PID ! 1, PID ! "1".
+    PID = spawn(test2, plusone, []), PID ! 1, PID ! "1".

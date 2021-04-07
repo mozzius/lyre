@@ -1,0 +1,8 @@
+func plusone(num: int) {
+  num + 1
+}
+
+func main() {
+  plusone(1)
+  plusone("1")
+}
