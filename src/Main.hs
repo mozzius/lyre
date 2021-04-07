@@ -26,15 +26,14 @@ parseArgs ["-h"] = usage >> exitSuccess
 parseArgs ["-v"] = version >> exitSuccess
 parseArgs ["-p", path] = erl path >> exitSuccess
 parseArgs ["-x", path] = run path >> exitSuccess
-parseArgs [path] = compile path False 
+parseArgs [path] = compile path 
 parseArgs _ = usage >> exitSuccess 
 
-compile :: String -> Bool -> IO ()
-compile path printAST = do
+compile :: String -> IO ()
+compile path = do
   let name = takeBaseName path
   file <- readFile path
   let ast = (compileModule name . typeCheck $ parse file) :: Module
-  if printAST then print ast else putStrLn "Compilation successful"
   createAndWriteFile ("build" </> name <.> "core") (prettyPrint ast)
   -- compile to BEAM
   callCommand ("erlc build" </> name <.> "core")
