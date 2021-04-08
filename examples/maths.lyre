@@ -2,12 +2,12 @@ func pow(num: int, to: int): int {
   if (to > 0) {
     return num * pow(num, to - 1)
   } else {
-    return "hi"
+    return 1
   }
 }
 
 func fib_2(a: int, b: int, max: int) {
-  print(a)
+  print(str(a))
   if (b <= max) {
     let sum = a + b
     fib_2(b, sum, max)

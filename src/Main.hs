@@ -55,7 +55,7 @@ usage =
     )
 
 version :: IO ()
-version = putStrLn "Lyre v0.0.1"
+version = putStrLn "Lyre v0.1.0"
 
 run :: String -> IO ()
 run path = callCommand ("erl -noshell -s " ++ path ++ " main -s init stop")

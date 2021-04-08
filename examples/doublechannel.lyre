@@ -2,17 +2,17 @@
 func client1(chan: channel channel int) {
   let intChan: channel int = recv(chan)
   let integer: int = recv(intChan)
-  print(integer)
+  print(str(integer))
 }
 
 func client2(chan: channel channel int) {
-  let intChan: channel int = make() :: channel int
+  let intChan: channel int = make()
   send(chan, intChan)
   send(intChan, 20)
 }
 
 func main() {
-  let chan: channel channel int = make() :: channel channel int
+  let chan: channel channel int = make()
   spawn(client1, chan)
   spawn(client2, chan)
 }
