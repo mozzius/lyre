@@ -196,10 +196,10 @@ instance TypeChecker Expr where
       (check op expected env)
       (check expr expected env)
   check (BinOp op expr1 expr2) expected env =
-    let exprType = infer expr1 env
-     in expectBoth
-          (check op exprType env)
-          (check expr2 exprType env)
+    expectAll
+      (check expr1 expected env)
+      (check op expected env)
+      (check expr2 expected env)
   check (Var name) expected env = case lookup name env of
     (Just type') -> expect type' expected
     Nothing -> error ("Type error: \"" ++ name ++ "\" is undefined")
@@ -279,7 +279,9 @@ instance TypeChecker Expr where
               )
   infer (BinOp op expr1 expr2) env =
     let exprType = infer expr1 env
-     in case expectBoth (check op exprType env) (check expr2 exprType env) of
+     in case expectBoth
+          (check op exprType env)
+          (check expr2 exprType env) of
           Correct -> exprType
           Incorrect exp msg ->
             error
