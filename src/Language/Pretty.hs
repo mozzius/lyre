@@ -60,7 +60,9 @@ instance Pretty Type where
   pretty IntType = "int"
   pretty StringType = "string"
   pretty (FuncType argTypes returnType) =
-    "func " ++ intercalate "," (map pretty argTypes)
+    -- not sure if we should include "func" at the beginning
+    -- "func " ++
+    intercalate ", " (map pretty argTypes)
       ++ ( case returnType of
              NoType -> ""
              _ -> " -> " ++ pretty returnType

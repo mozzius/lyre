@@ -80,6 +80,15 @@ getTypeFromOpt t = case t of
   Type t' -> t'
   NoType -> error "Type error: Expected something, got nothing"
 
+handleIncorrect :: String -> String -> OptType
+handleIncorrect exp msg =
+  error
+    ( "Type error: Expected "
+        ++ exp
+        ++ ", got "
+        ++ msg
+    )
+
 class TypeChecker t0 where
   infer :: t0 -> Env -> OptType
   check :: t0 -> OptType -> Env -> BoolWithError
@@ -95,13 +104,7 @@ instance TypeChecker Stmts where
   infer ((Let name exprType expr) : rest) env =
     case check expr exprType env of
       Correct -> infer rest ((name, exprType) : env)
-      Incorrect exp msg ->
-        error
-          ( "Type error: Expected "
-              ++ exp
-              ++ ", got "
-              ++ msg
-          )
+      Incorrect exp msg -> handleIncorrect exp msg
   infer ((Expr expr) : rest) env =
     infer expr env `seq` infer rest env
   infer ((FuncDef name args returnType block) : rest) env =
@@ -109,13 +112,7 @@ instance TypeChecker Stmts where
      in let env' = map (\(Arg argName argType) -> (argName, Type argType)) args ++ ((name, funcType) : env)
          in case check block returnType env' of
               Correct -> infer rest ((name, funcType) : env)
-              Incorrect exp msg ->
-                error
-                  ( "Type error: Expected "
-                      ++ exp
-                      ++ ", got "
-                      ++ msg
-                  )
+              Incorrect exp msg -> handleIncorrect exp msg
   infer ((If expr block) : rest) env =
     case check expr (Type BoolType) env of
       Correct ->
@@ -125,20 +122,8 @@ instance TypeChecker Stmts where
                      (Inline expr) -> check (Expr expr : rest) type' env
                  ) of
               Correct -> type'
-              Incorrect exp msg ->
-                error
-                  ( "Type error: Expected "
-                      ++ exp
-                      ++ ", got "
-                      ++ msg
-                  )
-      Incorrect exp msg ->
-        error
-          ( "Type error: Expected "
-              ++ exp
-              ++ ", got "
-              ++ msg
-          )
+              Incorrect exp msg -> handleIncorrect exp msg
+      Incorrect exp msg -> handleIncorrect exp msg
   infer ((IfElse expr block1 block2) : rest) env =
     case check expr (Type BoolType) env of
       Correct ->
@@ -152,20 +137,8 @@ instance TypeChecker Stmts where
                      (Inline expr) -> check (Expr expr : rest) type' env
                  ) of
               Correct -> type'
-              Incorrect exp msg ->
-                error
-                  ( "Type error: Expected "
-                      ++ exp
-                      ++ ", got "
-                      ++ msg
-                  )
-      Incorrect exp msg ->
-        error
-          ( "Type error: Expected "
-              ++ exp
-              ++ ", got "
-              ++ msg
-          )
+              Incorrect exp msg -> handleIncorrect exp msg
+      Incorrect exp msg -> handleIncorrect exp msg
   infer ((IfElseIf expr block stmt) : rest) env =
     case check expr (Type BoolType) env of
       Correct ->
@@ -176,20 +149,8 @@ instance TypeChecker Stmts where
               )
          in case check (stmt : rest) type' env of
               Correct -> type'
-              Incorrect exp msg ->
-                error
-                  ( "Type error: Expected "
-                      ++ exp
-                      ++ ", got "
-                      ++ msg
-                  )
-      Incorrect exp msg ->
-        error
-          ( "Type error: Expected "
-              ++ exp
-              ++ ", got "
-              ++ msg
-          )
+              Incorrect exp msg -> handleIncorrect exp msg
+      Incorrect exp msg -> handleIncorrect exp msg
   check stmts expected env = expect (infer stmts env) expected
 
 instance TypeChecker Block where
@@ -281,26 +242,14 @@ instance TypeChecker Expr where
      in let returnType = infer op env
          in case check op (genUnaSig exprType returnType) env of
               Correct -> returnType
-              Incorrect exp msg ->
-                error
-                  ( "Type error: Expected "
-                      ++ exp
-                      ++ ", got "
-                      ++ msg
-                  )
+              Incorrect exp msg -> handleIncorrect exp msg
   infer (BinOp op expr1 expr2) env =
     let expr1Type = getTypeFromOpt (infer expr1 env)
      in let expr2Type = getTypeFromOpt (infer expr2 env)
          in let returnType = infer op env
              in case check op (genBinSig expr1Type expr2Type returnType) env of
                   Correct -> returnType
-                  Incorrect exp msg ->
-                    error
-                      ( "Type error: Expected "
-                          ++ exp
-                          ++ ", got "
-                          ++ msg
-                      )
+                  Incorrect exp msg -> handleIncorrect exp msg
   infer (Var name) env = case lookup name env of
     (Just type') -> type'
     Nothing -> error ("Type error: \"" ++ name ++ "\" is undefined")
@@ -357,13 +306,7 @@ instance TypeChecker Expr where
   infer (Assert expr type') env =
     case check expr (Type type') env of
       Correct -> Type type'
-      Incorrect exp msg ->
-        error
-          ( "Type error: Expected "
-              ++ exp
-              ++ ", got "
-              ++ msg
-          )
+      Incorrect exp msg -> handleIncorrect exp msg
 
 instance TypeChecker UnaOp where
   infer Inv _ = genUnaSig BoolType (Type BoolType)
@@ -418,4 +361,27 @@ instance TypeChecker BinOp where
   -- string -> string -> string
   check Concat (Type (FuncType [StringType, StringType] (Type StringType))) _ = Correct
   -- no match
-  check op expected _ = Incorrect (pretty expected) (pretty (infer op []))
+  check op expected _ =
+    case expected of
+      Type (FuncType args return) ->
+        if return == infer op []
+          then
+            Incorrect
+              ( case op of
+                  Equals -> "any, any"
+                  NotEquals -> "any, any"
+                  Or -> "bool, bool"
+                  And -> "bool, bool"
+                  Plus -> "int, int"
+                  Minus -> "int, int"
+                  Div -> "int, int"
+                  Times -> "int, int"
+                  GreaterThan -> "int, int"
+                  GreaterEq -> "int, int"
+                  LessThan -> "int, int"
+                  LessEq -> "int, int"
+                  Concat -> "string, string"
+              )
+              (pretty (FuncType args NoType))
+          else Incorrect (pretty return) (pretty (infer op []))
+      _ -> Incorrect "a function" (pretty expected)
