@@ -68,6 +68,18 @@ typeCheck stmts =
                 ++ msg
             )
 
+-- Define the function signatures of operators
+genUnaSig :: Type -> OptType -> OptType
+genUnaSig x y = Type (FuncType [x] y)
+
+genBinSig :: Type -> Type -> OptType -> OptType
+genBinSig x y z = Type (FuncType [x, y] z)
+
+getTypeFromOpt :: OptType -> Type
+getTypeFromOpt t = case t of
+  Type t' -> t'
+  NoType -> error "Type error: Expected something, got nothing"
+
 class TypeChecker t0 where
   infer :: t0 -> Env -> OptType
   check :: t0 -> OptType -> Env -> BoolWithError
@@ -192,14 +204,12 @@ instance TypeChecker Expr where
   check (Boolean _) expected _ = expect (Type BoolType) expected
   check (Brack expr) expected env = check expr expected env
   check (UnaOp op expr) expected env =
-    expectBoth
-      (check op expected env)
-      (check expr expected env)
+    let exprType = getTypeFromOpt (infer expr env)
+     in check op (genUnaSig exprType expected) env
   check (BinOp op expr1 expr2) expected env =
-    let exprType = infer expr1 env
-     in expectBoth
-          (check op exprType env)
-          (check expr2 exprType env)
+    let expr1Type = getTypeFromOpt (infer expr1 env)
+     in let expr2Type = getTypeFromOpt (infer expr2 env)
+         in check op (genBinSig expr1Type expr2Type expected) env
   check (Var name) expected env = case lookup name env of
     (Just type') -> expect type' expected
     Nothing -> error ("Type error: \"" ++ name ++ "\" is undefined")
@@ -264,27 +274,30 @@ instance TypeChecker Expr where
   infer (Boolean _) _ = Type BoolType
   infer (Brack expr) env = infer expr env
   infer (UnaOp op expr) env =
-    let exprType = infer expr env
-     in case check op exprType env of
-          Correct -> exprType
-          Incorrect exp msg ->
-            error
-              ( "Type error: Expected "
-                  ++ exp
-                  ++ ", got "
-                  ++ msg
-              )
+    let exprType = getTypeFromOpt (infer expr env)
+     in let returnType = infer op env
+         in case check op (genUnaSig exprType returnType) env of
+              Correct -> returnType
+              Incorrect exp msg ->
+                error
+                  ( "Type error: Expected "
+                      ++ exp
+                      ++ ", got "
+                      ++ msg
+                  )
   infer (BinOp op expr1 expr2) env =
-    let exprType = infer expr1 env
-     in case expectBoth (check op exprType env) (check expr2 exprType env) of
-          Correct -> exprType
-          Incorrect exp msg ->
-            error
-              ( "Type error: Expected "
-                  ++ exp
-                  ++ ", got "
-                  ++ msg
-              )
+    let expr1Type = getTypeFromOpt (infer expr1 env)
+     in let expr2Type = getTypeFromOpt (infer expr2 env)
+         in let returnType = infer op env
+             in case check op (genBinSig expr1Type expr2Type returnType) env of
+                  Correct -> returnType
+                  Incorrect exp msg ->
+                    error
+                      ( "Type error: Expected "
+                          ++ exp
+                          ++ ", got "
+                          ++ msg
+                      )
   infer (Var name) env = case lookup name env of
     (Just type') -> type'
     Nothing -> error ("Type error: \"" ++ name ++ "\" is undefined")
@@ -350,40 +363,56 @@ instance TypeChecker Expr where
           )
 
 instance TypeChecker UnaOp where
-  infer Inv _ = Type BoolType
-  check Inv expected _ = expect (Type BoolType) expected
+  infer Inv _ = genUnaSig BoolType (Type BoolType)
+  check Inv expected _ = expect expected (genUnaSig BoolType (Type BoolType))
 
 instance TypeChecker BinOp where
-  infer Equals _ = error "Cannot infer type of Equals operator"
-  infer NotEquals _ = error "Cannot infer type of NotEquals operator"
+  -- infer just gets the return value
+  -- because we can't infer the full type
+  -- of equals, because we can't represent "any" types
+  infer Equals _ = Type BoolType
+  infer NotEquals _ = Type BoolType
   infer Or _ = Type BoolType
   infer And _ = Type BoolType
   infer Plus _ = Type IntType
   infer Minus _ = Type IntType
   infer Div _ = Type IntType
   infer Times _ = Type IntType
-  infer GreaterThan _ = Type IntType
-  infer LessThan _ = Type IntType
-  infer GreaterEq _ = Type IntType
-  infer LessEq _ = Type IntType
+  infer GreaterThan _ = Type BoolType
+  infer LessThan _ = Type BoolType
+  infer GreaterEq _ = Type BoolType
+  infer LessEq _ = Type BoolType
   infer Concat _ = Type StringType
-  check Equals expected _ =
-    if expected `elem` [Type BoolType, Type StringType, Type IntType]
-      then Correct
-      else Incorrect (pretty expected) "bool, string, int"
-  check NotEquals expected _ =
-    if expected `elem` [Type BoolType, Type StringType, Type IntType]
-      then Correct
-      else Incorrect (pretty expected) "bool, string, int"
-  check Or (Type BoolType) _ = Correct
-  check And (Type BoolType) _ = Correct
-  check Plus (Type IntType) _ = Correct
-  check Minus (Type IntType) _ = Correct
-  check Div (Type IntType) _ = Correct
-  check Times (Type IntType) _ = Correct
-  check GreaterThan (Type IntType) _ = Correct
-  check LessThan (Type IntType) _ = Correct
-  check GreaterEq (Type IntType) _ = Correct
-  check LessEq (Type IntType) _ = Correct
-  check Concat (Type StringType) _ = Correct
+
+  -- any -> any -> bool
+  check Equals (Type (FuncType [arg1, arg2] (Type BoolType))) _ =
+    if arg1 `elem` [BoolType, StringType, IntType]
+      then
+        if arg2 `elem` [BoolType, StringType, IntType]
+          then Correct
+          else Incorrect (pretty arg2) "bool, string, int"
+      else Incorrect (pretty arg1) "bool, string, int"
+  check NotEquals (Type (FuncType [arg1, arg2] (Type BoolType))) _ =
+    if arg1 `elem` [BoolType, StringType, IntType]
+      then
+        if arg2 `elem` [BoolType, StringType, IntType]
+          then Correct
+          else Incorrect (pretty arg2) "bool, string, int"
+      else Incorrect (pretty arg1) "bool, string, int"
+  -- bool -> bool -> bool
+  check Or (Type (FuncType [BoolType, BoolType] (Type BoolType))) _ = Correct
+  check And (Type (FuncType [BoolType, BoolType] (Type BoolType))) _ = Correct
+  -- int -> int -> int
+  check Plus (Type (FuncType [IntType, IntType] (Type IntType))) _ = Correct
+  check Minus (Type (FuncType [IntType, IntType] (Type IntType))) _ = Correct
+  check Div (Type (FuncType [IntType, IntType] (Type IntType))) _ = Correct
+  check Times (Type (FuncType [IntType, IntType] (Type IntType))) _ = Correct
+  -- int -> int -> bool
+  check GreaterThan (Type (FuncType [IntType, IntType] (Type BoolType))) _ = Correct
+  check LessThan (Type (FuncType [IntType, IntType] (Type BoolType))) _ = Correct
+  check GreaterEq (Type (FuncType [IntType, IntType] (Type BoolType))) _ = Correct
+  check LessEq (Type (FuncType [IntType, IntType] (Type BoolType))) _ = Correct
+  -- string -> string -> string
+  check Concat (Type (FuncType [StringType, StringType] (Type StringType))) _ = Correct
+  -- no match
   check op expected _ = Incorrect (pretty expected) (pretty (infer op []))
