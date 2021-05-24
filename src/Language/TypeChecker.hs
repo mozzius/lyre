@@ -263,8 +263,11 @@ instance TypeChecker Expr where
       (Type (FuncType argTypes returnType)) ->
         if map (`infer` env) exprs == map Type argTypes
           then expect returnType expected
-          else error ("Type error: Invalid arguments given to \"" ++ pretty expr ++ "\" - " ++ intercalate ", " (map (\x -> pretty $ infer x env) exprs))
-      _ -> error ("Type error: \"" ++ pretty expr ++ "\" is not a function")
+          else
+            Incorrect
+              (intercalate ", " (map pretty argTypes))
+              (intercalate ", " (map (\x -> pretty $ infer x env) exprs))
+      _ -> Incorrect "func" (pretty expr)
   check (Assert expr type') expected env =
     expectBoth
       (check expr (Type type') env)
