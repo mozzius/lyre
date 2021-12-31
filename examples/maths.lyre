@@ -1,11 +1,3 @@
-func pow(num: int, to: int): int {
-  if (to > 0) {
-    return num * pow(num, to - 1)
-  } else {
-    return 1
-  }
-}
-
 func fib_2(a: int, b: int, max: int) {
   print(str(a))
   if (b <= max) {
@@ -16,4 +8,12 @@ func fib_2(a: int, b: int, max: int) {
 
 func fib(max: int) {
   fib_2(0, 1, max)
+}
+
+func pow(num: int, to: int): int {
+  if (to > 0) {
+    return num * pow(num, to - 1)
+  } else {
+    return 1
+  }
 }
