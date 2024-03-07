@@ -1,10 +1,10 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.33.0.
+-- This file has been generated from package.yaml by hpack version 0.36.0.
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 782a677b50dc4b07d8ad71e36b313af5034792b4c68cc644237c6cab1d935618
+-- hash: 720b6e9f75ba22190a8838e572d4b6ab8882c2166f792e78d1eba61cea3c7be4
 
 name:           lyre
 version:        0.1.0
@@ -55,7 +55,7 @@ executable lyre-exe
   other-modules:
       Paths_lyre
   hs-source-dirs:
-      ./.
+      ./
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-tools:
       alex

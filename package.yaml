@@ -1,10 +1,10 @@
 name: lyre
 version: 0.1.0
 description: Lyre is a funcitonal programming language that compiles to Erlang, aiming to implement a channel-based concurrency system
-github: "Mozzius/lyre"
+github: "mozzius/lyre"
 license: BSD3
 author: "Samuel Newman"
-maintainer: "sfn3@kent.ac.uk"
+maintainer: "mozzius@protonmail.com"
 copyright: "2020 Samuel Newman"
 
 extra-source-files:
